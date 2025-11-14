@@ -1,10 +1,7 @@
 <?php
 /**
- * @var array  $features  Array of feature definitions.
- * @var string $active    Slug of the currently active feature.
+ * @var array $features Array of feature definitions.
  */
-
-$activeFeature = $features[$active] ?? reset($features);
 ?>
 <div class="features-page">
 
@@ -16,66 +13,38 @@ $activeFeature = $features[$active] ?? reset($features);
     </p>
   </header>
 
-  <div class="features-layout">
+  <main class="features-detail">
 
-    <!-- SIDEBAR NAV -->
-    <aside class="features-nav">
-      <h2 class="features-nav-title">Sections</h2>
-      <ul class="features-nav-list">
-        <?php foreach ($features as $slug => $feature): ?>
-          <?php
-            $isActive = ($slug === $active);
-            $href = '/features?section=' . urlencode($slug);
-          ?>
-          <li class="features-nav-item<?= $isActive ? ' is-active' : '' ?>">
-            <a href="<?= htmlspecialchars($href) ?>" class="features-nav-link">
-              <span class="features-nav-name">
-                <?= htmlspecialchars($feature['name']) ?>
-              </span>
-              <?php if (!empty($feature['pill'])): ?>
-                <span class="features-nav-pill">
-                  <?= htmlspecialchars($feature['pill']) ?>
-                </span>
-              <?php endif; ?>
-            </a>
-          </li>
-        <?php endforeach; ?>
-      </ul>
-    </aside>
+      <?php foreach ($features as $slug => $feature): ?>
+        <article id="feature-<?= htmlspecialchars($slug) ?>" class="features-detail-card">
+          <?php if (!empty($feature['pill'])): ?>
+            <div class="features-detail-pill">
+              <?= htmlspecialchars($feature['pill']) ?>
+            </div>
+          <?php endif; ?>
 
-    <!-- MAIN CONTENT -->
-    <main class="features-detail">
+          <h2 class="features-detail-title">
+            <?= htmlspecialchars($feature['name']) ?>
+          </h2>
 
-      <article class="features-detail-card">
-        <?php if (!empty($activeFeature['pill'])): ?>
-          <div class="features-detail-pill">
-            <?= htmlspecialchars($activeFeature['pill']) ?>
+          <?php if (!empty($feature['summary'])): ?>
+            <p class="features-detail-summary">
+              <?= htmlspecialchars($feature['summary']) ?>
+            </p>
+          <?php endif; ?>
+
+          <div class="features-detail-body">
+            <?= $feature['body'] ?>
           </div>
-        <?php endif; ?>
+        </article>
+      <?php endforeach; ?>
 
-        <h2 class="features-detail-title">
-          <?= htmlspecialchars($activeFeature['name']) ?>
-        </h2>
-
-        <?php if (!empty($activeFeature['summary'])): ?>
-          <p class="features-detail-summary">
-            <?= htmlspecialchars($activeFeature['summary']) ?>
-          </p>
-        <?php endif; ?>
-
-        <div class="features-detail-body">
-          <?= $activeFeature['body'] ?>
-        </div>
-
-        <div class="features-detail-footer">
-          <a href="/" class="features-detail-link">← Back to Home</a>
-          <span class="features-detail-spacer"></span>
-          <a href="/armory" class="features-detail-link">Open Armory</a>
-        </div>
-      </article>
+      <div class="features-detail-footer">
+        <a href="/" class="features-detail-link">← Back to Home</a>
+        <span class="features-detail-spacer"></span>
+        <a href="/armory" class="features-detail-link">Open Armory</a>
+      </div>
 
     </main>
-
-  </div>
 
 </div>

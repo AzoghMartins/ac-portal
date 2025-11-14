@@ -9,12 +9,7 @@ final class FeaturesController
 {
     public function __invoke(): void
     {
-        // Which feature is requested?
-        $section = $_GET['section'] ?? 'overview';
-        $section = (string)$section;
-
-        // Canonical slugs used from the home page feature cards:
-        // blizzlike, progression, playerbots, ahbot
+        // Feature definitions used by the Features page and the home page cards.
         $features = [
             'overview' => [
                 'slug'    => 'overview',
@@ -32,11 +27,6 @@ final class FeaturesController
                         Armory views, and (over time) deeper tools for tracking your characters,
                         campaigns, and long-term goals.
                     </p>
-                    <p>
-                        On this page you can explore the core design pillars of the realm:
-                        how rates are tuned, how progression is structured, and how bots fill out
-                        the world and economy without replacing real players.
-                    </p>
                 ',
             ],
 
@@ -44,22 +34,24 @@ final class FeaturesController
                 'slug'    => 'blizzlike',
                 'name'    => 'Blizzlike Rates',
                 'pill'    => 'Core',
-                'summary' => '1x experience and loot with a few quality-of-life tweaks to keep the world alive and rewarding.',
+                'summary' => 'Experience, loot, and item tables shift with the era you inhabit, binding you to the pace of history.',
                 'body'    => '
                     <p>
-                        Kardinal runs at <strong>blizzlike base rates</strong> for experience and loot.
-                        Leveling is intended to feel like a journey, not a formality you sprint through in an evening.
-                        When you gain a level here, it should feel earned.
+                        Kardinal keeps <strong>blizzlike rates</strong> but bends them to the expansion your character currently walks through.
+                        Experience gains, available gear, and drop chances all mirror what Blizzard shipped in that era,
+                        so the world feels like the moment it was forged, not a sprint past it.
                     </p>
                     <ul>
-                        <li><strong>Experience:</strong> 1x baseline. Rested XP still applies as normal.</li>
-                        <li><strong>Loot:</strong> Blizzlike, with private tuning only where it helps long-term stability.</li>
-                        <li><strong>Gold &amp; economy:</strong> The AH bot and PlayerBots help keep the world supplied without flooding it.</li>
+                        <li><strong>Levels 1&ndash;60:</strong> Classic pacing reigns. XP flows slowly, loot tables stay lean, and every green item feels like a relic won from the dark.</li>
+                        <li><strong>Levels 60&ndash;70:</strong> The Burning Crusade settings take over, restoring that razor balance between Outland danger and reward.</li>
+                        <li><strong>Levels 70&ndash;90:</strong> Standard Wrath-era rates return, steady enough for endgame campaigns but never generous enough to dull the edge.</li>
                     </ul>
                     <p>
-                        The intent is to preserve the pacing of original Wrath-era gameplay while
-                        still supporting modern realities: smaller populations, busy adult schedules,
-                        and the need for bots to cover gaps when friends are offline.
+                        By matching your timeline, leveling remains slower than modern Wrath realms and respectful of the long night between milestones.
+                        Rested XP still whispers its aid, but there are no hidden boosts, no easy skips&mdash;only the deliberate march of Azeroth&apos;s wars.
+                    </p>
+                    <p>
+                        The result is an epic, slightly haunted journey where progress carries weight and every upgrade feels earned beneath the northern lights.
                     </p>
                 ',
             ],
@@ -68,29 +60,45 @@ final class FeaturesController
                 'slug'    => 'progression',
                 'name'    => 'Individual Progression',
                 'pill'    => 'Progression',
-                'summary' => 'Characters move through Azeroth\'s history in ordered milestones instead of random content spam.',
+                'summary' => 'Each hero is locked to a specific patch of WoW history until they master its level, quest, and raid trials.',
                 'body'    => '
                     <p>
-                        Progression on Kardinal is designed with <strong>per-character history</strong> in mind.
-                        Instead of instantly unlocking everything, your character advances through content in
-                        <em>stages</em> that mirror the evolving story of Azeroth.
+                        Kardinal uses the <strong>Individual Progression</strong> system: your character is bound to a specific
+                        patch until they have conquered its requirements. Level caps, dungeon keys, and raid attunements all
+                        anchor you in the correct era, and only by defeating that patch&apos;s final boss (or completing its closing quest)
+                        does the next slice of history unlock.
                     </p>
-                    <p>
-                        Over time, we aim to gate certain pieces of content behind clear milestones:
-                    </p>
+                    <p><strong>VANILLA ERA</strong></p>
                     <ul>
-                        <li>Completion of key questlines or dungeon achievements.</li>
-                        <li>Story arcs that matter to your character&apos;s personal timeline.</li>
-                        <li>Optional challenge routes for players who want a harder path.</li>
+                        <li><strong>Tier 0:</strong> Reach level 50.</li>
+                        <li><strong>Tier 1:</strong> Defeat Ragnaros and Onyxia.</li>
+                        <li><strong>Tier 2:</strong> Defeat Nefarian.</li>
+                        <li><strong>Tier 3:</strong> Complete <em>Might of Kalimdor</em> or <em>Bang a Gong!</em>.</li>
+                        <li><strong>Tier 4:</strong> Complete <em>Chaos and Destruction</em>.</li>
+                        <li><strong>Tier 5:</strong> Defeat C&apos;thun.</li>
+                        <li><strong>Tier 6:</strong> Defeat Kel&apos;thuzad.</li>
+                        <li><strong>Tier 7:</strong> Complete <em>Into the Breach</em>.</li>
+                    </ul>
+                    <p><strong>THE BURNING CRUSADE ERA</strong></p>
+                    <ul>
+                        <li><strong>Tier 8:</strong> Defeat Prince Malchezaar.</li>
+                        <li><strong>Tier 9:</strong> Defeat Kael&apos;thas.</li>
+                        <li><strong>Tier 10:</strong> Defeat Illidan.</li>
+                        <li><strong>Tier 11:</strong> Defeat Zul&apos;jin.</li>
+                        <li><strong>Tier 12:</strong> Defeat Kil&apos;jaeden.</li>
+                    </ul>
+                    <p><strong>WRATH OF THE LICH KING ERA</strong></p>
+                    <ul>
+                        <li><strong>Tier 13:</strong> Defeat Kel&apos;thuzad (level 80).</li>
+                        <li><strong>Tier 14:</strong> Defeat Yogg-Saron.</li>
+                        <li><strong>Tier 15:</strong> Defeat Anub&apos;arak.</li>
+                        <li><strong>Tier 16:</strong> Defeat the Lich King.</li>
+                        <li><strong>Tier 17:</strong> Defeat Halion.</li>
                     </ul>
                     <p>
-                        The long-term vision is that you can look at a character on the Armory and see not just
-                        their <em>gear</em>, but also what <em>era</em> of the world they belong to and which
-                        story beats they&apos;ve actually lived through.
-                    </p>
-                    <p>
-                        This system is being built gradually, with room for campaigns, seasonal challenges,
-                        and custom content layered on top of the base Blizzard progression.
+                        Because progression is tied to <em>defeating the era&apos;s end boss or sealing its questline</em>, your Armory entry
+                        tells a true story: which wars you have survived, which gates you have opened, and whether the next age of Azeroth
+                        is yet willing to let you pass.
                     </p>
                 ',
             ],
@@ -102,16 +110,19 @@ final class FeaturesController
                 'summary' => 'Intelligent bots that fill parties, populate the world, and make off-peak hours feel alive.',
                 'body'    => '
                     <p>
-                        The realm uses <strong>AzerothCore PlayerBots</strong> to ensure that the world never feels empty.
-                        Whether you log in during a quiet hour or just want to test a dungeon route, you won&apos;t be alone.
+                        <strong>PlayerBots</strong> are AI-controlled characters that can join your party, run dungeons,
+                        and help keep the world active when real players are scarce. Kardinal supports the
+                        <a href="https://github.com/Wishmaster117/MultiBot" target="_blank" rel="noopener">MultiBot addon</a>
+                        for richer control, and you can study the full command set on the
+                        <a href="https://github.com/mod-playerbots/mod-playerbots/wiki/Playerbot-Commands" target="_blank" rel="noopener">PlayerBot wiki</a>.
                     </p>
                     <p>
-                        PlayerBots are:
+                        The goal is not to replace human groups, but to:
                     </p>
                     <ul>
-                        <li><strong>Configurable:</strong> You can adjust behaviours, roles, and group composition.</li>
-                        <li><strong>Party-friendly:</strong> Use bots to fill missing roles for 5-mans and basic content.</li>
-                        <li><strong>Respectful of players:</strong> They&apos;re there to support real players, not replace them.</li>
+                        <li>Let you run dungeons on your own schedule.</li>
+                        <li>Fill gaps in key roles (tank/healer) when the population is uneven.</li>
+                        <li>Make questing routes and smaller hubs feel less empty.</li>
                     </ul>
                     <p>
                         Over time, the goal is to refine bot configurations so that the world feels populated
@@ -148,16 +159,9 @@ final class FeaturesController
             ],
         ];
 
-        if (!isset($features[$section])) {
-            $section = 'overview';
-        }
-
-        $active = $section;
-
         View::render('features', [
             'title'    => 'Realm Features',
             'features' => $features,
-            'active'   => $active,
         ]);
     }
 }

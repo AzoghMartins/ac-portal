@@ -4,6 +4,7 @@ use App\WowHelper;
 /** @var array       $character */
 /** @var string|null $accountName */
 /** @var array       $gear */
+/** @var array|null  $progression */
 /** @var array|null  $viewer */
 /** @var bool        $isOwner */
 /** @var bool        $isStaff */
@@ -19,6 +20,9 @@ $className = WowHelper::className($classId);
 $raceName  = WowHelper::raceName($raceId);
 $classIcon = WowHelper::classIcon($classId);
 $raceIcon  = WowHelper::raceIcon($raceId, $gender);
+
+$progressionState = $progression['state'] ?? null;
+$progressionLabel = $progression['label'] ?? null;
 
 // Gender label
 $genderLabel = null;
@@ -171,6 +175,16 @@ $slotNames = [
             <th>Level</th>
             <td><?= (int)$char['level'] ?></td>
           </tr>
+          <tr>
+            <th>Progression Tier</th>
+            <td>
+              <?php if ($progressionLabel !== null): ?>
+                <?= htmlspecialchars($progressionLabel) ?>
+              <?php else: ?>
+                <span class="character-muted">Unknown</span>
+              <?php endif; ?>
+            </td>
+          </tr>
 
         </tbody>
       </table>
@@ -305,260 +319,3 @@ $slotNames = [
     <a href="/armory">Back to Armory</a>
   </p>
 </div>
-
-<style>
-  .character-page {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 5.5rem 1.5rem 3rem; /* leave room for fixed header */
-  }
-
-  .character-header {
-    margin-bottom: 2rem;
-  }
-
-  .character-title {
-    margin: 0 0 0.25rem;
-    font-size: 2.1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-  }
-
-  .character-title-icon {
-    vertical-align: -4px;
-    border-radius: 6px;
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
-  }
-
-  .character-subtitle {
-    margin: 0;
-    font-size: 0.95rem;
-    color: #a8b6d4;
-  }
-
-  .character-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-    gap: 1.5rem;
-    margin-bottom: 2.5rem;
-  }
-
-  .character-card {
-    background: radial-gradient(circle at top left, #101728, #050914 60%);
-    border-radius: 12px;
-    border: 1px solid rgba(90, 140, 220, 0.4);
-    box-shadow: 0 0 18px rgba(0, 0, 0, 0.7);
-    padding: 1.25rem 1.3rem 1.1rem;
-  }
-
-  .character-card-full {
-    grid-column: 1 / -1;
-  }
-
-  .character-section-title {
-    margin-top: 0;
-    margin-bottom: 0.9rem;
-    font-size: 1.3rem;
-  }
-
-  .character-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-  }
-
-  .character-table th,
-  .character-table td {
-    border-bottom: 1px solid #25324c;
-    padding: 0.45rem 0.6rem;
-    text-align: left;
-  }
-
-  .character-table th {
-    width: 32%;
-    font-weight: 600;
-    color: #c3d4ff;
-    white-space: nowrap;
-  }
-
-  .character-table tr:last-child th,
-  .character-table tr:last-child td {
-    border-bottom: none;
-  }
-
-  .character-inline-icon {
-    vertical-align: -3px;
-    margin-right: 6px;
-    border-radius: 4px;
-  }
-
-  .character-muted {
-    color: #7e8ca8;
-  }
-
-  .character-actions {
-    margin-top: 1rem;
-    border-top: 1px solid rgba(90, 140, 220, 0.35);
-    padding-top: 0.8rem;
-  }
-
-  .character-actions-title {
-    margin: 0 0 0.4rem;
-    font-size: 0.95rem;
-    color: #c3ddff;
-  }
-
-  .character-actions-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .character-actions-list li + li {
-    margin-top: 0.25rem;
-  }
-
-  .character-link-strong {
-    font-weight: 600;
-  }
-
-  .character-empty {
-    margin: 0.4rem 0 0.2rem;
-    font-size: 0.9rem;
-    color: #a8b6d4;
-  }
-
-  .character-gear-table-wrap {
-    overflow-x: auto;
-  }
-
-  .gear-table thead th {
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #9eb3e6;
-  }
-
-  .gear-table tbody td {
-    font-size: 0.88rem;
-    white-space: nowrap;
-  }
-
-  /* Item cell + tooltip */
-
-  .item-table .item-cell {
-    position: relative;
-    cursor: default;
-  }
-
-  .item-name {
-    border-bottom: 1px dashed rgba(180, 200, 255, 0.35);
-  }
-
-  .item-tooltip {
-    display: none;
-    position: absolute;
-    z-index: 20;
-    left: 0;
-    top: 100%;
-    margin-top: 4px;
-
-    min-width: 220px;
-    max-width: 320px;
-    padding: 0.55rem 0.7rem;
-
-    background: radial-gradient(circle at top, #040611, #020309 60%);
-    border-radius: 8px;
-    border: 1px solid rgba(146, 164, 255, 0.8);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.85);
-    font-size: 0.82rem;
-  }
-
-  .item-table .item-cell:hover .item-tooltip {
-    display: block;
-  }
-
-  /* Quality colors */
-
-  .quality-0 .item-name,
-  .quality-0 .item-tooltip-name {
-    color: #9d9d9d;
-  }
-  .quality-1 .item-name,
-  .quality-1 .item-tooltip-name {
-    color: #ffffff;
-  }
-  .quality-2 .item-name,
-  .quality-2 .item-tooltip-name {
-    color: #1eff00;
-  }
-  .quality-3 .item-name,
-  .quality-3 .item-tooltip-name {
-    color: #0070dd;
-  }
-  .quality-4 .item-name,
-  .quality-4 .item-tooltip-name {
-    color: #a335ee;
-  }
-  .quality-5 .item-name,
-  .quality-5 .item-tooltip-name {
-    color: #ff8000;
-  }
-  .quality-6 .item-name,
-  .quality-6 .item-tooltip-name {
-    color: #e6cc80;
-  }
-  .quality-7 .item-name,
-  .quality-7 .item-tooltip-name {
-    color: #00ccff;
-  }
-
-  .item-tooltip-name {
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-
-  .item-tooltip-line {
-    color: #e0e0e0;
-  }
-
-  .character-backlinks {
-    margin: 0;
-    font-size: 0.9rem;
-    color: #a8b6d4;
-  }
-
-  .character-backlinks a {
-    color: #c9a34f;
-  }
-
-  .character-backlinks a:hover {
-    color: #f0c86a;
-  }
-
-  .character-backlinks-separator {
-    margin: 0 0.5rem;
-    opacity: 0.7;
-  }
-
-  @media (max-width: 860px) {
-    .character-layout {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 600px) {
-    .character-page {
-      padding: 5.5rem 1rem 2.5rem;
-    }
-
-    .character-title {
-      font-size: 1.7rem;
-    }
-
-    .character-section-title {
-      font-size: 1.15rem;
-    }
-  }
-</style>

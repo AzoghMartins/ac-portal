@@ -80,6 +80,55 @@ final class CharacterController
         $isStaff     = ($viewerLevel >= 1); // gm or higher
         $canModerate = $isStaff;
 
+        // Individual progression tier (mod-individual-progression)
+        $progressionState = null;
+        $progressionLabel = null;
+        try {
+            $progStmt = $pdoChars->prepare("
+                SELECT value
+                FROM character_settings
+                WHERE guid = :guid
+                  AND source = 'mod-individual-progression'
+                  AND setting = 0
+                LIMIT 1
+            ");
+            $progStmt->execute([':guid' => $guid]);
+            $value = $progStmt->fetchColumn();
+            if ($value !== false) {
+                $progressionState = (int)$value;
+            }
+        } catch (\Throwable $e) {
+            $progressionState = null;
+        }
+
+        $progressionLabels = [
+            0  => 'Tier 0 – Reach level 50',
+            1  => 'Tier 1 – Defeat Ragnaros and Onyxia',
+            2  => 'Tier 1 – Defeat Ragnaros and Onyxia',
+            3  => 'Tier 2 – Defeat Nefarian',
+            4  => 'Tier 3 – Complete Might of Kalimdor or Bang a Gong!',
+            5  => 'Tier 4 – Complete Chaos and Destruction',
+            6  => 'Tier 5 – Defeat C\'thun',
+            7  => 'Tier 6 – Defeat Kel\'thuzad',
+            8  => 'Tier 7 – Complete Into the Breach',
+            9  => 'Tier 8 – Defeat Prince Malchezaar',
+            10 => 'Tier 9 – Defeat Kael\'thas',
+            11 => 'Tier 10 – Defeat Illidan',
+            12 => 'Tier 11 – Defeat Zul\'jin',
+            13 => 'Tier 12 – Defeat Kil\'jaeden',
+            14 => 'Tier 13 – Defeat Kel\'thuzad (Lvl 80)',
+            15 => 'Tier 14 – Defeat Yogg-Saron',
+            16 => 'Tier 15 – Defeat Anub\'arak',
+            17 => 'Tier 16 – Defeat The Lich King',
+            18 => 'Tier 17 – Defeat Halion',
+        ];
+
+        if ($progressionState === null) {
+            $progressionState = 0; // Default to Tier 0 (PROGRESSION_START) when no data is stored yet
+        }
+
+        $progressionLabel = $progressionLabels[$progressionState] ?? sprintf('Tier %d', $progressionState);
+
         // ---------- Gear loading ----------
         $gear = [];
         try {
@@ -184,6 +233,10 @@ final class CharacterController
             'character'   => $char,
             'accountName' => $accountName,
             'gear'        => $gear,
+            'progression' => [
+                'state' => $progressionState,
+                'label' => $progressionLabel,
+            ],
             'viewer'      => $viewer,
             'isOwner'     => $isOwner,
             'isStaff'     => $isStaff,
