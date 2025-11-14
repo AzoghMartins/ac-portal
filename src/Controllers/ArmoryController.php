@@ -9,9 +9,28 @@ use App\View;
 final class ArmoryController {
     public function __invoke(): void {
         $charsDb = Db::env('DB_CHARACTERS','acore_characters');
+
+        $sql = "
+            SELECT
+                guid,
+                name,
+                level,
+                class,
+                race,
+                gender,
+                totaltime
+            FROM characters
+            ORDER BY level DESC, totaltime DESC, name ASC
+            LIMIT 10
+        ";
+
         $rows = Db::pdo($charsDb)
-            ->query("SELECT name, level, guid FROM characters ORDER BY level DESC, totaltime DESC LIMIT 10")
+            ->query($sql)
             ->fetchAll();
-        View::render('armory', ['rows' => $rows, 'title' => 'Armory (Top 10)']);
+
+        View::render('armory', [
+            'rows'  => $rows,
+            'title' => 'Armory (Top 10)',
+        ]);
     }
 }

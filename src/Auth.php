@@ -127,4 +127,12 @@ final class Auth {
             'role'     => $role,
         ];
     }
+
+    public static function requireLogin(string $redirectTo = '/account'): void {
+        self::start();
+        if (!self::user()) {
+            header('Location: /login?redirect=' . rawurlencode($redirectTo));
+            exit;
+        }
+    }
 }

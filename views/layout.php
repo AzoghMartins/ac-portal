@@ -22,6 +22,7 @@ $user = Auth::user();
     <a href="/">Home</a>
     <a href="/armory">Armory</a>
     <?php if ($user): ?>
+      <a href="/account">My Account</a>
       <span class="muted">| Signed in as <?= htmlspecialchars($user['username']) ?> (<?= htmlspecialchars($user['role']) ?>)</span>
       <a style="margin-left:1rem" href="/logout">Logout</a>
     <?php else: ?>

@@ -38,6 +38,15 @@ switch ($path) {
         echo json_encode(['ok' => true, 'time' => time()]);
         break;
 
+    case '/account':
+        (new \App\Controllers\AccountController())();
+        break;
+
+    case '/character':
+        (new \App\Controllers\CharacterController())();
+        break;
+
+
     case '/maintenance':
         if (($_ENV['APP_MAINTENANCE'] ?? 'false') === 'true') {
             http_response_code(503);
