@@ -47,6 +47,7 @@ final class ArmorySearchController
                     c.level,
                     c.class,
                     c.race,
+                    c.gender,
                     AVG(it.ItemLevel) AS avg_ilvl,
                     CASE c.class
                         WHEN 1  THEN 'Warrior'
@@ -109,6 +110,7 @@ final class ArmorySearchController
                     'class'      => (int)$row['class'],
                     'class_name' => $row['class_name'],
                     'race'       => (int)$row['race'],
+                    'gender'     => isset($row['gender']) ? (int)$row['gender'] : 0,
                     'race_name'  => $row['race_name'],
                     'avg_ilvl'   => $row['avg_ilvl'] !== null ? (float)$row['avg_ilvl'] : null,
                 ];

@@ -1,6 +1,14 @@
 <?php
 use App\Auth;
 $user = Auth::user();
+
+if (!function_exists('asset_version')) {
+    function asset_version(string $relativePath): int
+    {
+        $fullPath = dirname(__DIR__) . '/public' . $relativePath;
+        return file_exists($fullPath) ? (int)filemtime($fullPath) : time();
+    }
+}
 ?>
 <!doctype html>
 <html>
@@ -10,11 +18,11 @@ $user = Auth::user();
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <!-- Global layout styles -->
-  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/layout.css?v=<?= asset_version('/assets/css/layout.css') ?>">
 
   <!-- Page-specific styles -->
-  <link rel="stylesheet" href="/assets/css/home.css">
-  <link rel="stylesheet" href="/assets/css/auth.css">
+  <link rel="stylesheet" href="/assets/css/home.css?v=<?= asset_version('/assets/css/home.css') ?>">
+  <link rel="stylesheet" href="/assets/css/auth.css?v=<?= asset_version('/assets/css/auth.css') ?>">
 
   <!-- Fantasy + Body fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
@@ -68,11 +76,7 @@ $user = Auth::user();
         © <?= date('Y') ?> Kardinal WoW. Not affiliated with or endorsed by Blizzard Entertainment.
       </p>
       <p class="footer-meta">
-        Env:
-        <code><?= htmlspecialchars($_ENV['APP_ENV'] ?? 'local') ?></code>
-        — Debug:
-        <code><?= htmlspecialchars($_ENV['APP_DEBUG'] ?? 'false') ?></code>
-        — Powered by <span class="footer-highlight">AzerothCore</span>.
+        Powered by <span class="footer-highlight">AzerothCore</span>.
       </p>
     </div>
   </footer>

@@ -28,16 +28,12 @@ use App\WowHelper;
           <dt>Role</dt>
           <dd><?= htmlspecialchars($role) ?></dd>
         </div>
-        <?php if (isset($gmLevel) && $gmLevel !== null): ?>
+        <?php if (isset($gmLevel) && $gmLevel !== null && (int)$gmLevel > 0): ?>
           <div class="account-summary-row">
             <dt>GM Level</dt>
             <dd><?= (int)$gmLevel ?></dd>
           </div>
         <?php endif; ?>
-        <div class="account-summary-row">
-          <dt>Account ID</dt>
-          <dd><?= isset($user['id']) ? (int)$user['id'] : 0 ?></dd>
-        </div>
       </dl>
     </div>
   </section>

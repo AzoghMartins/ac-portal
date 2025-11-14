@@ -101,7 +101,6 @@ use App\WowHelper;
                     height="18"
                     class="armory-inline-icon"
                   >
-                  <?= htmlspecialchars($className) ?>
                 </td>
                 <td>
                   <?php if ($avgIlvl !== null): ?>
@@ -198,8 +197,35 @@ use App\WowHelper;
       nameTd.appendChild(link);
 
       levelTd.textContent = r.level != null ? r.level : '—';
-      classTd.textContent = r.class_name || '—';
-      raceTd.textContent  = r.race_name  || '—';
+      const classId = Object.prototype.hasOwnProperty.call(r, 'class') ? r['class'] : null;
+      if (typeof classId === 'number' || (typeof classId === 'string' && classId !== '')) {
+        const classImg = document.createElement('img');
+        classImg.src = '/assets/icons/class/' + encodeURIComponent(classId) + '.gif';
+        classImg.alt = r.class_name || 'Class';
+        classImg.width = 18;
+        classImg.height = 18;
+        classImg.className = 'armory-inline-icon';
+        classTd.appendChild(classImg);
+      } else {
+        classTd.textContent = '—';
+      }
+      const raceId = Object.prototype.hasOwnProperty.call(r, 'race') ? r['race'] : null;
+      const gender = Object.prototype.hasOwnProperty.call(r, 'gender') ? r['gender'] : 0;
+      if (
+        (typeof raceId === 'number' && !Number.isNaN(raceId)) ||
+        (typeof raceId === 'string' && raceId !== '')
+      ) {
+        const resolvedGender = typeof gender === 'number' ? gender : parseInt(gender, 10) || 0;
+        const raceImg = document.createElement('img');
+        raceImg.src = '/assets/icons/race/' + encodeURIComponent(raceId) + '-' + encodeURIComponent(resolvedGender) + '.gif';
+        raceImg.alt = r.race_name || 'Race';
+        raceImg.width = 18;
+        raceImg.height = 18;
+        raceImg.className = 'armory-inline-icon';
+        raceTd.appendChild(raceImg);
+      } else {
+        raceTd.textContent = '—';
+      }
 
       if (typeof r.avg_ilvl === 'number') {
         ilvlTd.textContent = r.avg_ilvl.toFixed(1);

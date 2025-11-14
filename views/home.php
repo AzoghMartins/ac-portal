@@ -251,7 +251,7 @@ $lastUpdateStr  = $last_update ?? null;
   <div class="section-inner discord-inner">
 
     <div class="discord-content">
-      <h2 class="section-title discord-title">Join the Warcrafter Community</h2>
+      <h2 class="section-title discord-title">Join the Community</h2>
 
       <p class="discord-text">
         Beyond the boundaries of the realm lies a gathering place for heroes — a space where stories are shared,

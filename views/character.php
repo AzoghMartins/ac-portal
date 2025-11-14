@@ -78,6 +78,21 @@ if ($isOwner || $isStaff) {
     );
 }
 
+$avgIlvl = null;
+if (!empty($gear)) {
+    $sumIlvl = 0;
+    $countIlvl = 0;
+    foreach ($gear as $g) {
+        if (isset($g['ItemLevel']) && is_numeric($g['ItemLevel'])) {
+            $sumIlvl += (float)$g['ItemLevel'];
+            $countIlvl++;
+        }
+    }
+    if ($countIlvl > 0) {
+        $avgIlvl = $sumIlvl / $countIlvl;
+    }
+}
+
 
 // Correct 3.3.5a equipment slot mapping (0–18)
 $slotNames = [
@@ -176,6 +191,16 @@ $slotNames = [
             <td><?= (int)$char['level'] ?></td>
           </tr>
           <tr>
+            <th>Average iLvl</th>
+            <td>
+              <?php if ($avgIlvl !== null): ?>
+                <?= number_format($avgIlvl, 1) ?>
+              <?php else: ?>
+                <span class="character-muted">Unknown</span>
+              <?php endif; ?>
+            </td>
+          </tr>
+          <tr>
             <th>Progression Tier</th>
             <td>
               <?php if ($progressionLabel !== null): ?>
@@ -248,9 +273,6 @@ $slotNames = [
               <tr>
                 <th>Slot</th>
                 <th>Item</th>
-                <th>iLvl</th>
-                <th>Quality</th>
-                <th>Type</th>
               </tr>
             </thead>
             <tbody>
@@ -259,9 +281,7 @@ $slotNames = [
                 $slotId   = (int)$g['slot'];
                 $slotName = $slotNames[$slotId] ?? ('Slot '.$slotId);
                 $itemName = $g['name'] ?? 'Unknown item';
-                $ilvl     = $g['ItemLevel'] ?? null;
                 $quality  = $g['Quality']   ?? null;
-                $invType  = $g['InventoryType'] ?? null;
                 $reqLevel = $g['RequiredLevel'] ?? null;
 
                 $qualityNames = [
@@ -279,8 +299,6 @@ $slotNames = [
                 // CSS class based on quality (fallback to common if null)
                 $qualityClass = 'quality-' . ($quality !== null ? (int)$quality : 1);
 
-                // Simple InventoryType label for now
-                $invTypeText = $invType !== null ? (string)(int)$invType : '-';
               ?>
               <tr>
                 <td><?= htmlspecialchars($slotName) ?></td>
@@ -301,9 +319,6 @@ $slotNames = [
                     <?php endif; ?>
                   </div>
                 </td>
-                <td><?= $ilvl !== null ? (int)$ilvl : '-' ?></td>
-                <td><?= htmlspecialchars($qualityLabel) ?></td>
-                <td><?= $invTypeText ?></td>
               </tr>
             <?php endforeach; ?>
             </tbody>
