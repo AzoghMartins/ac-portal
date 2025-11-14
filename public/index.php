@@ -13,9 +13,6 @@ ini_set('display_errors','1');
 $uri  = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $path = rtrim($uri, '/');
 
-// TEMP DEBUG:
-echo "<!-- uri={$uri} | path={$path} -->";
-
 switch ($path) {
     case '':
         (new App\Controllers\HomeController)();
@@ -23,6 +20,10 @@ switch ($path) {
 
     case '/armory':
         (new App\Controllers\ArmoryController)();
+        break;
+
+    case '/armory/search':
+        (new App\Controllers\ArmorySearchController())();
         break;
 
     case '/login':
@@ -49,6 +50,11 @@ switch ($path) {
     case '/shop':
         (new \App\Controllers\ShopController())();
         break;
+
+    case '/features':
+        (new \App\Controllers\FeaturesController())();
+        break;
+
 
     case '/maintenance':
         if (($_ENV['APP_MAINTENANCE'] ?? 'false') === 'true') {

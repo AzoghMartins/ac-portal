@@ -31,4 +31,25 @@ final class Db {
         ]);
         return self::$pool[$db] = $pdo;
     }
+
+    public static function pdoWrite(string $db): PDO {
+        $key = $db . ':w';
+        if (isset(self::$pool[$key])) {
+            return self::$pool[$key];
+        }
+
+        // Use DB_USER_WRITE / DB_PASS_WRITE if set, otherwise fall back to DB_USER / DB_PASS
+        $user = self::env('DB_USER_WRITE', self::env('DB_USER'));
+        $pass = self::env('DB_PASS_WRITE', self::env('DB_PASS'));
+
+        $pdo = new PDO(self::dsn($db), $user, $pass, [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+
+        return self::$pool[$key] = $pdo;
+    }
+
+
+
 }

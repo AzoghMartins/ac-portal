@@ -6,7 +6,7 @@ $user = Auth::user();
 <html>
 <head>
   <meta charset="utf-8">
-  <title><?= htmlspecialchars($title ?? 'AC Portal') ?></title>
+  <title><?= htmlspecialchars('Kardinal WoW - '.$title ?? 'AC Portal') ?></title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <!-- Global layout styles -->

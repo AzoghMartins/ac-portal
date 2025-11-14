@@ -86,4 +86,66 @@ final class WowHelper
     {
         return self::RACE_NAMES[$raceId] ?? "Race {$raceId}";
     }
+
+    /** @var array<int,string> */
+    private const MAP_NAMES = [
+        0   => 'Eastern Kingdoms',
+        1   => 'Kalimdor',
+        530 => 'Outland',
+        571 => 'Northrend',
+        // Add more instance maps here if you want (e.g. 609 => 'Ebon Hold')
+    ];
+
+    /**
+     * Note: this is a partial list for now, focused on major zones and cities.
+     * You can extend it whenever you like with more `zoneId => 'Name'` pairs.
+     *
+     * Zone IDs are the same ones you see in the `characters.zone` column
+     * (and in AreaTable.dbc). These are 3.3.5a IDs.
+     *
+     * Example: 1537 = Ironforge, 1519 = Stormwind City, etc.
+     *
+     * @var array<int,string>
+     */
+    private const ZONE_NAMES = [
+        // Alliance starting / levelling
+        12   => 'Elwynn Forest',
+        1    => 'Dun Morogh',
+        38   => 'Loch Modan',
+        44   => 'Redridge Mountains',
+        10   => 'Duskwood',
+        1519 => 'Stormwind City',
+        1537 => 'Ironforge',
+        3483 => 'Hellfire Peninsula',
+        3520 => 'Shadowmoon Valley',
+
+        // Horde starting / levelling
+        14   => 'Durotar',
+        17   => 'The Barrens',
+        85   => 'Tirisfal Glades',
+        130  => 'Silverpine Forest',
+        1637 => 'Orgrimmar',
+        1638 => 'Thunder Bluff',
+        3487 => 'Silvermoon City',
+
+        // Neutral hubs / capitals
+        3703 => 'Shattrath City',
+        4395 => 'Dalaran',
+
+        // Example you mentioned
+        // 1537 => 'Ironforge',  // already there
+    ];
+
+    public static function mapName(int $mapId): ?string
+    {
+        return self::MAP_NAMES[$mapId] ?? null;
+    }
+
+    public static function zoneName(int $zoneId): ?string
+    {
+        return self::ZONE_NAMES[$zoneId] ?? null;
+    }
+
+
+
 }

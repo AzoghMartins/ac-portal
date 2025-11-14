@@ -105,6 +105,50 @@ final class Auth {
         return hash_equals($vLE, $verifierBin);
     }
 
+    /**
+     * Create an SRP6 verifier blob for AzerothCore (32-byte little-endian).
+     *
+     * @param string $username Account name (case-insensitive)
+     * @param string $password Plain-text password
+     * @param string $saltBin  32-byte random salt (binary string)
+     * @return string          32-byte verifier (binary string, little-endian)
+     */
+    public static function srpCreateVerifier(string $username, string $password, string $saltBin): string
+    {
+        if (!function_exists('gmp_init')) {
+            throw new \RuntimeException('GMP extension is required for SRP6.');
+        }
+
+        // Same constants as srpVerify()
+        $Nhex = '894B645E89E1535BBDAD5B8B290650530801B18EBFBF5E8FAB3C82872A3E9BB7';
+        $N    = gmp_init($Nhex, 16);
+        $g    = gmp_init(7, 10);
+
+        // 1) H1 = SHA1( UPPER(USERNAME) + ":" + UPPER(PASSWORD) )
+        $ihash = sha1(strtoupper($username) . ':' . strtoupper($password), true); // raw 20 bytes
+
+        // 2) x = SHA1( salt || H1 ), then little-endian to integer
+        $xH  = sha1($saltBin . $ihash, true);   // raw 20 bytes
+        $xLE = strrev($xH);                     // WoW uses little-endian for SRP ints
+        $x   = gmp_import($xLE, 1, GMP_MSW_FIRST | GMP_BIG_ENDIAN);
+
+        // 3) v = g^x mod N
+        $v = gmp_powm($g, $x, $N);
+
+        // 4) Export v as 32-byte little-endian blob to store in DB
+        $vBE = gmp_export($v, 1, GMP_MSW_FIRST | GMP_BIG_ENDIAN);
+        if ($vBE === false) {
+            $vBE = "";
+        }
+
+        // pad to 32 bytes big-endian, then flip to little-endian
+        $vBE = str_pad($vBE, 32, "\0", STR_PAD_LEFT);
+        $vLE = strrev($vBE);
+
+        return $vLE; // matches what srpVerify() expects
+    }
+
+
     private static function buildSessionUser(int $accountId, string $username, PDO $pdoAuth): array {
         // Resolve GM level (account_access)
         $gmLevel = 0;

@@ -1,14 +1,37 @@
 <?php
-$mode = $_GET['mode'] ?? 'login';
+// Active tab (login/register)
+$mode = $mode ?? ($_GET['mode'] ?? 'login');
 $mode = $mode === 'register' ? 'register' : 'login';
+
+// Old form values for re-populating registration fields
+$old = $old ?? ['username' => '', 'email' => ''];
+
+// Build action URL (keep ?redirect=... if present)
+$redirect = $_GET['redirect'] ?? '';
+$actionUrl = '/login';
+if ($redirect !== '') {
+    $actionUrl .= '?redirect=' . rawurlencode($redirect);
+}
 ?>
 <div class="auth-page">
   <div class="auth-card">
 
     <div class="auth-tabs">
-      <a href="/login" class="auth-tab <?= $mode === 'login' ? 'is-active' : '' ?>">Sign In</a>
-      <a href="/login?mode=register" class="auth-tab <?= $mode === 'register' ? 'is-active' : '' ?>">Register</a>
+      <a href="/login<?= $redirect !== '' ? '?redirect=' . rawurlencode($redirect) : '' ?>"
+         class="auth-tab <?= $mode === 'login' ? 'is-active' : '' ?>">
+        Sign In
+      </a>
+      <a href="/login?mode=register<?= $redirect !== '' ? '&redirect=' . rawurlencode($redirect) : '' ?>"
+         class="auth-tab <?= $mode === 'register' ? 'is-active' : '' ?>">
+        Register
+      </a>
     </div>
+
+    <?php if (!empty($info) && $mode === 'login'): ?>
+      <div class="auth-info">
+        <?= htmlspecialchars($info) ?>
+      </div>
+    <?php endif; ?>
 
     <?php if (!empty($error) && $mode === 'login'): ?>
       <div class="auth-error">
@@ -16,22 +39,39 @@ $mode = $mode === 'register' ? 'register' : 'login';
       </div>
     <?php endif; ?>
 
+    <?php if (!empty($registerError) && $mode === 'register'): ?>
+      <div class="auth-error">
+        <?= htmlspecialchars($registerError) ?>
+      </div>
+    <?php endif; ?>
+
     <?php if ($mode === 'login'): ?>
 
-      <h1 class="auth-title">Sign in to Kardinal WoW</h1>
-      <p class="auth-subtitle">
-        Use your realm account credentials to access the portal and armory.
-      </p>
+      <form method="post" action="<?= htmlspecialchars($actionUrl) ?>" class="auth-form">
+        <input type="hidden" name="mode" value="login">
 
-      <form method="post" action="/login" class="auth-form">
         <div class="auth-field">
-          <label class="auth-label" for="username">Username</label>
-          <input id="username" name="username" class="auth-input" required autofocus>
+          <label for="login-username" class="auth-label">Account Name</label>
+          <input
+            type="text"
+            id="login-username"
+            name="username"
+            class="auth-input"
+            autocomplete="username"
+            required
+          >
         </div>
 
         <div class="auth-field">
-          <label class="auth-label" for="password">Password</label>
-          <input id="password" type="password" name="password" class="auth-input" required>
+          <label for="login-password" class="auth-label">Password</label>
+          <input
+            type="password"
+            id="login-password"
+            name="password"
+            class="auth-input"
+            autocomplete="current-password"
+            required
+          >
         </div>
 
         <div class="auth-actions">
@@ -39,38 +79,62 @@ $mode = $mode === 'register' ? 'register' : 'login';
         </div>
 
         <p class="auth-note">
-          Accounts are shared between the realm and the portal.<br>
-          Change your password using the usual realm tools.
+          Use the same account credentials you use to log in to the WoW realm.
         </p>
       </form>
 
     <?php else: ?>
 
-      <h1 class="auth-title">Create an Account</h1>
-      <p class="auth-subtitle">
-        Registration through the portal can be enabled here once the backend is ready.
-        For now, this layout defines the look and feel of the page.
-      </p>
+      <form method="post" action="<?= htmlspecialchars($actionUrl) ?>" class="auth-form">
+        <input type="hidden" name="mode" value="register">
 
-      <form method="post" action="/register" class="auth-form">
         <div class="auth-field">
-          <label class="auth-label" for="reg-username">Username</label>
-          <input id="reg-username" name="username" class="auth-input" required>
+          <label for="reg-username" class="auth-label">Account Name</label>
+          <input
+            type="text"
+            id="reg-username"
+            name="username"
+            class="auth-input"
+            autocomplete="username"
+            value="<?= htmlspecialchars($old['username'] ?? '') ?>"
+            required
+          >
         </div>
 
         <div class="auth-field">
-          <label class="auth-label" for="reg-email">Email (optional)</label>
-          <input id="reg-email" type="email" name="email" class="auth-input">
+          <label for="reg-email" class="auth-label">Email (optional)</label>
+          <input
+            type="email"
+            id="reg-email"
+            name="email"
+            class="auth-input"
+            autocomplete="email"
+            value="<?= htmlspecialchars($old['email'] ?? '') ?>"
+          >
         </div>
 
         <div class="auth-field">
-          <label class="auth-label" for="reg-password">Password</label>
-          <input id="reg-password" type="password" name="password" class="auth-input" required>
+          <label for="reg-password" class="auth-label">Password</label>
+          <input
+            type="password"
+            id="reg-password"
+            name="password"
+            class="auth-input"
+            autocomplete="new-password"
+            required
+          >
         </div>
 
         <div class="auth-field">
-          <label class="auth-label" for="reg-password-confirm">Confirm Password</label>
-          <input id="reg-password-confirm" type="password" name="password_confirm" class="auth-input" required>
+          <label for="reg-password-confirm" class="auth-label">Confirm Password</label>
+          <input
+            type="password"
+            id="reg-password-confirm"
+            name="password_confirm"
+            class="auth-input"
+            autocomplete="new-password"
+            required
+          >
         </div>
 
         <div class="auth-actions">
@@ -78,8 +142,8 @@ $mode = $mode === 'register' ? 'register' : 'login';
         </div>
 
         <p class="auth-note">
-          Registration handling is not yet wired to the realm core. This form defines
-          the visual design and can be connected to your registration flow later.
+          This will create a new AzerothCore account on the realm. Usernames are
+          case-insensitive; passwords are case-sensitive.
         </p>
       </form>
 
