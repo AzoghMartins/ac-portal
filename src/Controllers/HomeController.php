@@ -13,6 +13,7 @@ final class HomeController {
     public function __invoke(): void {
         $authDb   = Db::env('DB_AUTH','acore_auth');
         $worldDb  = Db::env('DB_WORLD','acore_world');
+        $charsDb  = Db::env('DB_CHARACTERS', 'acore_characters');
 
         // Basic metric
         $accounts = (int)(Db::pdo($authDb)->query('SELECT COUNT(*) c FROM account')->fetch()['c'] ?? 0);
@@ -92,13 +93,83 @@ final class HomeController {
             $uptimeHuman = implode(' ', $parts);
         }
 
+
+        // Realm name from realmlist (assuming realm id 1)
+$realmName   = null;
+$realmOnline = false;
+
+try {
+    $pdo = Db::pdo($authDb);
+    $stmt = $pdo->query("SELECT name FROM realmlist WHERE id = 1 LIMIT 1");
+    $row  = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($row && isset($row['name'])) {
+        $realmName = $row['name'];
+    }
+} catch (\Throwable $e) {
+    // swallow, show null in view
+}
+
+// Decide online/offline based on uptime: if we have a computed uptime, worldserver is up
+$realmOnline = $uptimeHuman !== null;
+
+// Character counts
+$botCharacters    = 0;
+$playerCharacters = 0;
+$allianceOnline   = 0;
+$hordeOnline      = 0;
+
+try {
+    $charsPdo = Db::pdo($charsDb);
+
+    // Bot characters: accounts 1–300
+    $botCharacters = (int)$charsPdo
+        ->query("SELECT COUNT(*) FROM characters WHERE account BETWEEN 1 AND 300")
+        ->fetchColumn();
+
+    // Player characters: accounts 301+
+    $playerCharacters = (int)$charsPdo
+        ->query("SELECT COUNT(*) FROM characters WHERE account >= 301")
+        ->fetchColumn();
+
+    // Online Alliance players (non-bots)
+$allianceOnline = (int)$charsPdo
+    ->query("
+        SELECT COUNT(*) FROM characters
+        WHERE online = 1
+        AND account >= 301
+        AND race IN (1, 3, 4, 7, 11)
+    ")
+    ->fetchColumn();
+
+    // Online Horde players (non-bots)
+$hordeOnline = (int)$charsPdo
+    ->query("
+        SELECT COUNT(*) FROM characters
+        WHERE online = 1
+        AND account >= 301
+        AND race IN (2, 5, 6, 8, 9, 10)
+    ")
+    ->fetchColumn();
+
+} catch (\Throwable $e) {
+    // If something fails, we just leave counts at 0
+}
+
+
         View::render('home', [
-            'title'        => 'Home',
-            'accounts'     => $accounts,
-            'ac_rev'       => $rev,
-            'last_restart' => $lastRestart,
-            'uptime_human' => $uptimeHuman,
-            'last_update'  => $lastUpdate,
-        ]);
+    'title'            => 'Home',
+    'accounts'         => $accounts,
+    'ac_rev'           => $rev,
+    'last_restart'     => $lastRestart,
+    'uptime_human'     => $uptimeHuman,
+    'last_update'      => $lastUpdate,
+    'realm_name'       => $realmName,
+    'realm_online'     => $realmOnline,
+    'bot_characters'   => $botCharacters,
+    'player_characters'=> $playerCharacters,
+    'online_alliance'  => $allianceOnline,
+    'online_horde'     => $hordeOnline,
+]);
+
     }
 }

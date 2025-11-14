@@ -1,95 +1,113 @@
-<?php /** @var array $user */ ?>
-<?php /** @var string $role */ ?>
-<?php /** @var array $characters */ ?>
-
 <?php
+/** @var array  $user */
+/** @var string $role */
+/** @var array  $characters */
+/** @var int|null $gmLevel */
+
 use App\WowHelper;
 ?>
 
-<h1>My Account</h1>
+<div class="account-page">
+  <header class="account-header">
+    <h1 class="account-title">My Account</h1>
+    <p class="account-subtitle">
+      Overview of your realm access and the characters bound to this shard of Azeroth.
+    </p>
+  </header>
 
-<section class="card">
-  <h2>Account</h2>
-  <p><strong>Username:</strong> <?= htmlspecialchars($user['username'] ?? '') ?></p>
-  <p><strong>Role:</strong> <?= htmlspecialchars($role) ?></p>
-</section>
+  <section class="account-section account-summary">
+    <div class="account-summary-card">
+      <h2 class="section-title account-section-title">Account Overview</h2>
 
-<section class="card">
-  <h2>My Characters</h2>
-  <?php if (empty($characters)): ?>
-    <p>No characters found on this account yet.</p>
-  <?php else: ?>
-    <div class="table-wrap">
-      <table class="clickable-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Level</th>
-            <th>Class</th>
-            <th>Race</th>
-            <th>Total Time (h)</th>
-          </tr>
-        </thead>
-        <tbody>
-        <?php foreach ($characters as $c): ?>
-          <?php
-            $guid    = (int)$c['guid'];
-            $classId = (int)$c['class'];
-            $raceId  = (int)$c['race'];
-
-            $gender = null;
-            if (array_key_exists('gender', $c)) {
-                $gender = $c['gender'] !== null ? (int)$c['gender'] : null;
-            }
-
-            $className = WowHelper::className($classId);
-            $raceName  = WowHelper::raceName($raceId);
-
-            $classIcon = WowHelper::classIcon($classId);
-            $raceIcon  = WowHelper::raceIcon($raceId, $gender);
-
-            $charUrl = '/character?guid=' . $guid;
-          ?>
-          <tr class="clickable-row" data-href="<?= htmlspecialchars($charUrl) ?>">
-            <td>
-              <a href="<?= htmlspecialchars($charUrl) ?>" style="color:inherit;text-decoration:none">
-                <?= htmlspecialchars($c['name']) ?>
-              </a>
-            </td>
-            <td><?= (int)$c['level'] ?></td>
-            <td>
-              <img src="<?= htmlspecialchars($classIcon) ?>"
-                   alt="<?= htmlspecialchars($className) ?>"
-                   width="18" height="18"
-                   style="vertical-align:-3px;margin-right:6px">
-              <?= htmlspecialchars($className) ?>
-            </td>
-            <td>
-              <img src="<?= htmlspecialchars($raceIcon) ?>"
-                   alt="<?= htmlspecialchars($raceName) ?>"
-                   width="18" height="18"
-                   style="vertical-align:-3px;margin-right:6px">
-              <?= htmlspecialchars($raceName) ?>
-            </td>
-            <td><?= number_format(((int)$c['totaltime']) / 3600, 1) ?></td>
-          </tr>
-        <?php endforeach; ?>
-        </tbody>
-      </table>
+      <dl class="account-summary-list">
+        <div class="account-summary-row">
+          <dt>Username</dt>
+          <dd><?= htmlspecialchars($user['username'] ?? '') ?></dd>
+        </div>
+        <div class="account-summary-row">
+          <dt>Role</dt>
+          <dd><?= htmlspecialchars($role) ?></dd>
+        </div>
+        <?php if (isset($gmLevel) && $gmLevel !== null): ?>
+          <div class="account-summary-row">
+            <dt>GM Level</dt>
+            <dd><?= (int)$gmLevel ?></dd>
+          </div>
+        <?php endif; ?>
+        <div class="account-summary-row">
+          <dt>Account ID</dt>
+          <dd><?= isset($user['id']) ? (int)$user['id'] : 0 ?></dd>
+        </div>
+      </dl>
     </div>
-  <?php endif; ?>
-</section>
+  </section>
 
-<style>
-  .card { background:#eee; border:1px solid #333; border-radius:8px; padding:16px; margin:16px 0; }
-  .table-wrap { overflow:auto; }
-  table { width:100%; border-collapse:collapse; }
-  th, td { padding:8px 10px; border-bottom:1px solid #222; text-align:left; }
-  thead th { border-bottom:1px solid #333; }
+  <section class="account-section account-characters">
+    <h2 class="section-title account-section-title">Your Characters</h2>
 
-  .clickable-table tr.clickable-row { cursor:pointer; }
-  .clickable-table tr.clickable-row:hover { background-color:#ddd; }
-</style>
+    <?php if (empty($characters)): ?>
+      <p class="account-empty">
+        No characters are currently associated with this account.
+      </p>
+    <?php else: ?>
+      <div class="account-characters-table-wrap">
+        <table class="account-characters-table clickable-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Level</th>
+              <th>Race</th>
+              <th>Class</th>
+              <th>Online</th>
+              <th>Played</th>
+            </tr>
+          </thead>
+          <tbody>
+          <?php foreach ($characters as $char): ?>
+            <?php
+              $guid    = (int)$char['guid'];
+              $name    = $char['name'] ?? '';
+              $level   = (int)$char['level'];
+              $raceId  = (int)$char['race'];
+              $classId = (int)$char['class'];
+              $online  = !empty($char['online']);
+              $total   = isset($char['totaltime']) ? (int)$char['totaltime'] : 0;
+
+              $hours   = intdiv($total, 3600);
+              $minutes = intdiv($total % 3600, 60);
+
+              $raceName  = WowHelper::raceName($raceId);
+              $className = WowHelper::className($classId);
+            ?>
+            <tr class="clickable-row" data-href="/character?guid=<?= $guid ?>">
+              <td class="char-name">
+                <?= htmlspecialchars($name) ?>
+              </td>
+              <td><?= $level ?></td>
+              <td><?= htmlspecialchars($raceName) ?></td>
+              <td><?= htmlspecialchars($className) ?></td>
+              <td>
+                <?php if ($online): ?>
+                  <span class="status-dot status-dot--online"></span> Online
+                <?php else: ?>
+                  <span class="status-dot status-dot--offline"></span> Offline
+                <?php endif; ?>
+              </td>
+              <td>
+                <?php if ($total > 0): ?>
+                  <?= $hours ?>h <?= $minutes ?>m
+                <?php else: ?>
+                  —
+                <?php endif; ?>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif; ?>
+  </section>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

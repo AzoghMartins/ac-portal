@@ -269,7 +269,6 @@ $slotNames = [
 </p>
 
 <style>
-  .card { background:#eee; border:1px solid #333; border-radius:8px; padding:16px; margin:16px 0; }
   table { width:100%; border-collapse:collapse; max-width:820px; }
   th, td { padding:8px 10px; border-bottom:1px solid #222; }
   thead th { border-bottom:1px solid #333; }

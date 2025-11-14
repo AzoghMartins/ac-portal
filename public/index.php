@@ -46,6 +46,9 @@ switch ($path) {
         (new \App\Controllers\CharacterController())();
         break;
 
+    case '/shop':
+        (new \App\Controllers\ShopController())();
+        break;
 
     case '/maintenance':
         if (($_ENV['APP_MAINTENANCE'] ?? 'false') === 'true') {
