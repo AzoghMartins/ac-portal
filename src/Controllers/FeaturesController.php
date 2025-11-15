@@ -5,8 +5,14 @@ namespace App\Controllers;
 
 use App\View;
 
+/**
+ * Serves the /features page with static realm configuration details.
+ */
 final class FeaturesController
 {
+    /**
+     * Renders the features list.
+     */
     public function __invoke(): void
     {
         // Feature definitions used by the Features page and the home page cards.

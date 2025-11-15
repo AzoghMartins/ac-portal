@@ -6,10 +6,17 @@ namespace App\Controllers;
 use App\Auth;
 use App\Db;
 use App\View;
+use App\WowHelper;
 use PDO;
 
+/**
+ * Displays an individual character profile with gear and chronicle history.
+ */
 final class CharacterController
 {
+    /**
+     * Entry point for /character?guid=... — aggregates data from multiple databases.
+     */
     public function __invoke(): void
     {
         $charsDb = Db::env('DB_CHARACTERS', 'acore_characters');
@@ -60,6 +67,7 @@ final class CharacterController
         }
 
         $accountId = (int)$char['account'];
+        $raceId    = isset($char['race']) ? (int)$char['race'] : 0;
 
         // Account name (nice to have)
         $accountName = null;
@@ -228,19 +236,171 @@ final class CharacterController
         }
         // ---------- end gear loading ----------
 
+        $chronicleEntries = [];
+        try {
+            $raceNameForChronicle = trim(WowHelper::raceName($raceId));
+            $raceSlug = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '_', $raceNameForChronicle), '_'));
+
+            $startPayloadCandidates = [];
+            if ($raceNameForChronicle !== '') {
+                $startPayloadCandidates[] = 'Start ' . $raceNameForChronicle;
+            }
+            if ($raceSlug !== '') {
+                $startPayloadCandidates[] = 'start_' . $raceSlug;
+                $startPayloadCandidates[] = 'Start ' . ucwords(str_replace('_', ' ', $raceSlug));
+            }
+            if ($raceId > 0) {
+                $startPayloadCandidates[] = 'start_' . $raceId;
+                $startPayloadCandidates[] = 'Start ' . $raceId;
+            }
+            $startPayloadCandidates[] = 'Start';
+
+            $startPayloadCandidates = array_values(array_unique($startPayloadCandidates));
+
+            $combineNarrative = static function (array $row, string $characterName, bool $useGroupNarrative = false): ?string {
+                if ($useGroupNarrative) {
+                    $text = trim((string)($row['group_narrative'] ?? ''));
+                    if ($text === '') {
+                        $text = trim((string)($row['narrative'] ?? ''));
+                    }
+                } else {
+                    $text = trim((string)($row['narrative'] ?? ''));
+                }
+
+                if ($text === '') {
+                    return null;
+                }
+
+                $replacer = static function (string $content) use ($characterName): string {
+                    return str_replace('<name>', $characterName, $content);
+                };
+
+                return $replacer($text);
+            };
+
+            $startRow = null;
+            if (!empty($startPayloadCandidates)) {
+                $extraStmt = $pdoChars->prepare("
+                    SELECT payload, narrative, `group narrative` AS group_narrative
+                    FROM character_chronicle_extras
+                    WHERE payload = :payload
+                    LIMIT 1
+                ");
+                foreach ($startPayloadCandidates as $candidatePayload) {
+                    $extraStmt->execute([':payload' => $candidatePayload]);
+                    $row = $extraStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+                    if ($row) {
+                        $startRow = $row;
+                        break;
+                    }
+                }
+            }
+            if ($startRow) {
+                $startText = $combineNarrative($startRow, $char['name']);
+                if ($startText !== null) {
+                    $chronicleEntries[] = [
+                        'created_at' => null,
+                        'text'       => $startText,
+                    ];
+                }
+            }
+
+            $logStmt = $pdoChars->prepare("
+                SELECT event_payload, event_type, created_at, group_members
+                FROM character_chronicle_log
+                WHERE character_guid = :guid
+                ORDER BY created_at ASC
+            ");
+            $logStmt->execute([':guid' => $guid]);
+            $logRows = $logStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $validLogRows = [];
+            $payloadMap   = [];
+            foreach ($logRows as $row) {
+                $eventType = strtolower(trim((string)($row['event_type'] ?? '')));
+                if ($eventType === 'quest' || $eventType === 'achievement') {
+                    continue;
+                }
+
+                $payload = trim((string)($row['event_payload'] ?? ''));
+                if ($payload === '') {
+                    continue;
+                }
+
+                $validLogRows[] = $row;
+                $payloadMap[$payload] = true;
+            }
+
+            $extrasByPayload = [];
+            if ($payloadMap) {
+                $payloads = array_keys($payloadMap);
+                $chunks   = array_chunk($payloads, 50);
+                foreach ($chunks as $chunk) {
+                    $placeholders = implode(',', array_fill(0, count($chunk), '?'));
+                    $stmt = $pdoChars->prepare("
+                        SELECT payload, narrative, `group narrative` AS group_narrative
+                        FROM character_chronicle_extras
+                        WHERE payload IN ($placeholders)
+                    ");
+                    $stmt->execute($chunk);
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                        $key = (string)$row['payload'];
+                        $extrasByPayload[$key] = $row;
+                    }
+                }
+            }
+
+            foreach ($validLogRows as $row) {
+                $payload = trim((string)($row['event_payload'] ?? ''));
+                if ($payload === '') {
+                    continue;
+                }
+                $extraRow = $extrasByPayload[$payload] ?? null;
+                if ($extraRow === null) {
+                    continue;
+                }
+
+                $hasGroupMembers = isset($row['group_members']) && trim((string)$row['group_members']) !== '';
+
+                $text = $combineNarrative($extraRow, $char['name'], $hasGroupMembers);
+                if ($text === null) {
+                    continue;
+                }
+
+                $createdAtDisplay = null;
+                $createdAtRaw = $row['created_at'] ?? null;
+                if ($createdAtRaw) {
+                    try {
+                        $dateObj = new \DateTimeImmutable($createdAtRaw);
+                        $createdAtDisplay = $dateObj->format('F j, Y • H:i');
+                    } catch (\Throwable $e) {
+                        $createdAtDisplay = (string)$createdAtRaw;
+                    }
+                }
+
+                $chronicleEntries[] = [
+                    'created_at' => $createdAtDisplay,
+                    'text'       => $text,
+                ];
+            }
+        } catch (\Throwable $e) {
+            $chronicleEntries = [];
+        }
+
         View::render('character', [
-            'title'       => sprintf('Character: %s', $char['name']),
-            'character'   => $char,
-            'accountName' => $accountName,
-            'gear'        => $gear,
-            'progression' => [
+            'title'             => sprintf('Character: %s', $char['name']),
+            'character'         => $char,
+            'accountName'       => $accountName,
+            'gear'              => $gear,
+            'progression'       => [
                 'state' => $progressionState,
                 'label' => $progressionLabel,
             ],
-            'viewer'      => $viewer,
-            'isOwner'     => $isOwner,
-            'isStaff'     => $isStaff,
-            'canModerate' => $canModerate,
+            'viewer'            => $viewer,
+            'isOwner'           => $isOwner,
+            'isStaff'           => $isStaff,
+            'canModerate'       => $canModerate,
+            'chronicleEntries'  => $chronicleEntries,
         ]);
     }
 }

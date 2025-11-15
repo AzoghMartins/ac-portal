@@ -6,8 +6,14 @@ namespace App\Controllers;
 use App\Db;
 use App\View;
 
+/**
+ * Displays the main Armory page with search UI and top characters.
+ */
 final class ArmoryController
 {
+    /**
+     * Renders the armory landing page with the top 10 list.
+     */
     public function __invoke(): void
     {
         $charsDb = Db::env('DB_CHARACTERS', 'acore_characters');

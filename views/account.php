@@ -1,8 +1,12 @@
 <?php
-/** @var array  $user */
-/** @var string $role */
-/** @var array  $characters */
-/** @var int|null $gmLevel */
+/**
+ * Account dashboard view: summarizes owner info and character roster.
+ *
+ * @var array     $user
+ * @var string    $role
+ * @var array     $characters
+ * @var int|null  $gmLevel
+ */
 
 use App\WowHelper;
 ?>

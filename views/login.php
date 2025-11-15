@@ -1,4 +1,8 @@
 <?php
+/**
+ * Authentication view handling both sign-in and registration tabs.
+ */
+
 // Active tab (login/register)
 $mode = $mode ?? ($_GET['mode'] ?? 'login');
 $mode = $mode === 'register' ? 'register' : 'login';

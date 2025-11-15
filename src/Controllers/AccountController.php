@@ -8,8 +8,14 @@ use App\Db;
 use App\View;
 use PDO;
 
+/**
+ * Renders the account dashboard with user info and character roster.
+ */
 final class AccountController
 {
+    /**
+     * Entry point for /account.
+     */
     public function __invoke(): void
     {
         Auth::start();

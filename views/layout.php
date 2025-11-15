@@ -1,8 +1,16 @@
 <?php
+/**
+ * Global site layout: wraps view templates with navigation, footer, and CSS includes.
+ */
+
 use App\Auth;
+
 $user = Auth::user();
 
 if (!function_exists('asset_version')) {
+    /**
+     * Cache-bust helper for static assets.
+     */
     function asset_version(string $relativePath): int
     {
         $fullPath = dirname(__DIR__) . '/public' . $relativePath;
@@ -14,7 +22,7 @@ if (!function_exists('asset_version')) {
 <html>
 <head>
   <meta charset="utf-8">
-  <title><?= htmlspecialchars('Kardinal WoW - '.$title ?? 'AC Portal') ?></title>
+  <title><?= htmlspecialchars('Kardinal WoW - ' . ($title ?? 'AC Portal')) ?></title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <!-- Global layout styles -->
@@ -25,8 +33,8 @@ if (!function_exists('asset_version')) {
   <link rel="stylesheet" href="/assets/css/auth.css?v=<?= asset_version('/assets/css/auth.css') ?>">
 
   <!-- Fantasy + Body fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Forum&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Forum&display=swap" rel="stylesheet">
 
 </head>
 <body>
@@ -42,35 +50,35 @@ if (!function_exists('asset_version')) {
       </button>
 
       <nav id="main-nav" class="main-nav">
-    <div class="nav-left-spacer"></div>
+        <div class="nav-left-spacer"></div>
 
-    <ul class="nav-center">
-        <li><a href="/">Home</a></li>
-        <li><a href="/armory">Armory</a></li>
-        <li><a href="/features">Features</a></li>
-    </ul>
+        <ul class="nav-center">
+          <li><a href="/">Home</a></li>
+          <li><a href="/armory">Armory</a></li>
+          <li><a href="/features">Features</a></li>
+        </ul>
 
-    <div class="nav-right-spacer"></div>
+        <div class="nav-right-spacer"></div>
 
-    <div class="nav-auth">
-        <?php if ($user): ?>
+        <div class="nav-auth">
+          <?php if ($user): ?>
             <span class="nav-username">
-                <?= htmlspecialchars($user['username'] ?? '') ?>
+              <?= htmlspecialchars($user['username'] ?? '') ?>
             </span>
             <a href="/account" class="nav-btn nav-btn--primary">Account</a>
             <a href="/logout" class="nav-btn nav-btn--secondary">Logout</a>
-        <?php else: ?>
+          <?php else: ?>
             <a href="/login" class="nav-btn nav-btn--primary">Login</a>
             <a href="/login?mode=register" class="nav-btn nav-btn--secondary">Register</a>
-        <?php endif; ?>
-    </div>
-</nav>
+          <?php endif; ?>
+        </div>
+      </nav>
     </div>
   </header>
 
   <?php require $templateFile; ?>
 
-    <footer class="site-footer">
+  <footer class="site-footer">
     <div class="site-footer-inner">
       <p class="footer-main">
         © <?= date('Y') ?> Kardinal WoW. Not affiliated with or endorsed by Blizzard Entertainment.

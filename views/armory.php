@@ -1,7 +1,11 @@
 <?php
-use App\WowHelper;
+/**
+ * Armory landing page: exposes search UI and the top 10 characters by iLvl.
+ *
+ * @var array $rows Top 10 rows: each has guid, name, level, class, race, avg_ilvl
+ */
 
-/** @var array $rows Top 10 rows: each has guid, name, level, class, race, avg_ilvl */
+use App\WowHelper;
 ?>
 
 <div class="armory-page">

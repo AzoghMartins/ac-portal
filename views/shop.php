@@ -1,7 +1,11 @@
 <?php
-/** @var array|null $viewer */
-/** @var int|null $guid */
-/** @var string|null $tab */
+/**
+ * Placeholder shop view while the actual purchasing experience is under construction.
+ *
+ * @var array|null  $viewer
+ * @var int|null    $guid
+ * @var string|null $tab
+ */
 ?>
 <h1>Shop</h1>
 

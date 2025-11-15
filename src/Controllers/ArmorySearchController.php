@@ -6,8 +6,14 @@ namespace App\Controllers;
 use App\Db;
 use PDO;
 
+/**
+ * JSON search endpoint backing the Armory autocomplete/grid.
+ */
 final class ArmorySearchController
 {
+    /**
+     * Handles GET /armory/search?q=... returning character matches.
+     */
     public function __invoke(): void
     {
         $charsDb = Db::env('DB_CHARACTERS', 'acore_characters');

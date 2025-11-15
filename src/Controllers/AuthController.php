@@ -7,8 +7,14 @@ use App\Auth;
 use App\Db;
 use App\View;
 
+/**
+ * Handles authentication workflows: login, registration, logout.
+ */
 final class AuthController
 {
+    /**
+     * Shows the combined login/register page and processes submissions.
+     */
     public function login(): void
     {
         // Which tab should be active?
@@ -33,6 +39,9 @@ final class AuthController
         ]);
     }
 
+    /**
+     * Processes login POST requests.
+     */
     private function handleLogin(): void
     {
         $u = trim($_POST['username'] ?? '');
@@ -60,6 +69,9 @@ final class AuthController
         ]);
     }
 
+    /**
+     * Processes registration POST requests and provisions AzerothCore accounts.
+     */
     private function handleRegister(): void
     {
         $username = trim($_POST['username'] ?? '');
@@ -173,6 +185,9 @@ final class AuthController
         ]);
     }
 
+    /**
+     * Logs the user out and redirects home.
+     */
     public function logout(): void
     {
         Auth::logout();

@@ -1,14 +1,19 @@
 <?php
-use App\WowHelper;
+/**
+ * Character profile view: shows overview data, gear, and the chronicle entries.
+ *
+ * @var array       $character
+ * @var string|null $accountName
+ * @var array       $gear
+ * @var array|null  $progression
+ * @var array|null  $viewer
+ * @var bool        $isOwner
+ * @var bool        $isStaff
+ * @var bool        $canModerate
+ * @var array       $chronicleEntries
+ */
 
-/** @var array       $character */
-/** @var string|null $accountName */
-/** @var array       $gear */
-/** @var array|null  $progression */
-/** @var array|null  $viewer */
-/** @var bool        $isOwner */
-/** @var bool        $isStaff */
-/** @var bool        $canModerate */
+use App\WowHelper;
 
 $char = $character;
 
@@ -324,6 +329,41 @@ $slotNames = [
             </tbody>
           </table>
         </div>
+      <?php endif; ?>
+    </section>
+
+    <section class="card character-card character-card-full character-chronicle">
+      <h2 class="section-title character-section-title">
+        Chronicle of <?= htmlspecialchars($char['name']) ?>
+      </h2>
+      <?php if (!empty($chronicleEntries)): ?>
+        <div class="character-chronicle-list">
+          <?php foreach ($chronicleEntries as $entry): ?>
+            <article class="character-chronicle-entry">
+              <?php if (!empty($entry['created_at'])): ?>
+                <p class="character-chronicle-entry-meta">
+                  <?= htmlspecialchars($entry['created_at']) ?>
+                </p>
+              <?php endif; ?>
+              <div class="character-chronicle-entry-text">
+                <?php
+                $paragraphs = preg_split('/\r?\n+/', (string)$entry['text']);
+                foreach ($paragraphs as $paragraph):
+                    $paragraph = trim($paragraph);
+                    if ($paragraph === '') {
+                        continue;
+                    }
+                ?>
+                  <p><?= nl2br(htmlspecialchars($paragraph)) ?></p>
+                <?php endforeach; ?>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <p class="character-empty">
+          Chronicle entries have not been recorded for this hero yet.
+        </p>
       <?php endif; ?>
     </section>
   </div>

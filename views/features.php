@@ -1,6 +1,8 @@
 <?php
 /**
- * @var array $features Array of feature definitions.
+ * Features landing view: loops through configured feature entries and renders details.
+ *
+ * @var array $features Array of feature definitions keyed by slug.
  */
 ?>
 <div class="features-page">

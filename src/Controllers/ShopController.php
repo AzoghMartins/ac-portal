@@ -6,8 +6,14 @@ namespace App\Controllers;
 use App\Auth;
 use App\View;
 
+/**
+ * Placeholder shop endpoint until the purchasing UI is implemented.
+ */
 final class ShopController
 {
+    /**
+     * Renders the in-progress shop view.
+     */
     public function __invoke(): void
     {
         // Ensure session + user context
