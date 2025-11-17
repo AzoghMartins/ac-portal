@@ -117,6 +117,49 @@ $playerCount   = (int)($player_characters ?? 0);
     </div>
   </section>
 
+  <!-- HOW TO CONNECT -->
+  <section class="section connect">
+    <div class="section-inner connect-inner" style="text-align: center;">
+      <h2 class="section-title connect-title">How to Connect</h2>
+      <div class="connect-grid" style="text-align: center;">
+        <div class="connect-step">
+          <h3 class="connect-step-title">1) Register</h3>
+          <p class="connect-step-text">
+            Create your game account on the portal.
+          </p>
+          <p class="connect-step-link">
+            <a href="/login?mode=register">Go to registration →</a>
+          </p>
+        </div>
+
+        <div class="connect-step">
+          <h3 class="connect-step-title">2) Download Client</h3>
+          <p class="connect-step-text">
+            Use the Wrath 3.3.5a client download. Only download the client and (optionally) the HD Patch for 3.3.5a &mdash; not the Alternative HD Patch or Challenge Mode patches.
+          </p>
+          <p class="connect-step-link">
+            <a href="https://www.chromiecraft.com/en/downloads/" target="_blank" rel="noopener">Get the client →</a>
+          </p>
+        </div>
+
+        <div class="connect-step">
+          <h3 class="connect-step-title">3) Set Realmlist</h3>
+          <p class="connect-step-text">
+            In your client folder, edit <code>Data/enUS/realmlist.wtf</code> and set:
+          </p>
+<pre class="connect-realmlist" style="display: inline-block; text-align: left;"><code>SET realmlist kardinalwow.duckdns.org</code></pre>
+        </div>
+
+        <div class="connect-step">
+          <h3 class="connect-step-title">4) Log In</h3>
+          <p class="connect-step-text">
+            Launch WoW and sign in with the username and password you registered on the portal.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- SERVER FEATURES -->
   <section class="section features">
     <div class="section-inner features-inner">
@@ -163,6 +206,17 @@ $playerCount   = (int)($player_characters ?? 0);
           </p>
           <p class="feature-link">
             <a href="/features?section=ahbot">Learn more →</a>
+          </p>
+        </div>
+
+        <div class="feature-block">
+          <h3 class="feature-title">Challenge Modes</h3>
+          <p class="feature-text">
+            Optional difficulty modifiers you can pledge to at the Shrine of Challenge, reshaping your leveling journey
+            into something sharper, slower, or more ruthless.
+          </p>
+          <p class="feature-link">
+            <a href="/features?section=challenges">Learn more →</a>
           </p>
         </div>
       </div>
@@ -264,24 +318,6 @@ $playerCount   = (int)($player_characters ?? 0);
             <li>
               <span class="roadmap-pill roadmap-pill--soon">Soon</span>
               <div class="roadmap-item">
-                <div class="roadmap-item-title">Challenge Modes</div>
-                <div class="roadmap-item-text">
-                  Challenge yourself with Hardcore, Crafter, and other special gameplay modifiers.
-                </div>
-              </div>
-            </li>
-            <li>
-              <span class="roadmap-pill roadmap-pill--soon">Soon</span>
-              <div class="roadmap-item">
-                <div class="roadmap-item-title">Features Overview Page</div>
-                <div class="roadmap-item-text">
-                  A richer features hub that explains progression tiers, bot behaviour, and realm rules.
-                </div>
-              </div>
-            </li>
-            <li>
-              <span class="roadmap-pill roadmap-pill--soon">Soon</span>
-              <div class="roadmap-item">
                 <div class="roadmap-item-title">Account &amp; Character Tools</div>
                 <div class="roadmap-item-text">
                   Expanded web tools for managing characters and preparing for future story systems.
@@ -289,7 +325,7 @@ $playerCount   = (int)($player_characters ?? 0);
               </div>
             </li>
             <li>
-              <span class="roadmap-pill roadmap-pill--later">Later</span>
+              <span class="roadmap-pill roadmap-pill--soon">Soon</span>
               <div class="roadmap-item">
                 <div class="roadmap-item-title">Story-Driven Web Features</div>
                 <div class="roadmap-item-text">

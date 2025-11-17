@@ -163,6 +163,46 @@ final class FeaturesController
                     </p>
                 ',
             ],
+
+            'challenges' => [
+                'slug'    => 'challenges',
+                'name'    => 'Challenge Modes',
+                'pill'    => 'Rules',
+                'summary' => 'Optional difficulty modifiers you can pledge to at the Shrine of Challenge to reshape your leveling journey.',
+                'body'    => '
+                    <p>
+                        For players who like their adventures with a sharper edge, <strong>Challenge Modes</strong> let you twist the
+                        rules of Azeroth to your liking. At the <em>Shrine of Challenge</em>, found near every starting zone graveyard,
+                        fresh characters can pledge themselves to one or more special difficulty modifiers. Each challenge reshapes
+                        the leveling journey into something a bit more ruthless, a bit more tactical — and a lot more memorable.
+                    </p>
+
+                    <p><strong>Available Challenges</strong></p>
+                    <ul>
+                        <li><strong>Hardcore:</strong> Death is final. A fallen hero becomes a ghost forever, unable to return to the world of the living.</li>
+                        <li><strong>Self-Crafted:</strong> Only equipment crafted by your own hands may be worn. If you didn’t make it, you can’t use it.</li>
+                        <li><strong>Normal Gear Only:</strong> You may only equip items of Normal or Poor quality. No fancy stuff.</li>
+                        <li><strong>Slow XP Gain:</strong> Experience earned is reduced to 0.5×, making each level a longer climb.</li>
+                        <li><strong>Very Slow XP Gain:</strong> For the truly patient: XP is reduced to 0.25×, turning leveling into a marathon of grit.</li>
+                        <li><strong>Quest XP Only:</strong> The only way to gain experience is through quests. No grinding mobs, no dungeon spam — pure questing.</li>
+                    </ul>
+
+                    <p><strong>Activation &amp; Restrictions</strong><br>
+                        Challenges can only be enabled on level 1 characters (or level 55 for Death Knights), and once chosen, they define that character’s entire journey.
+                    </p>
+
+                    <p><strong>Combining Challenges</strong><br>
+                        Multiple challenges can be active at the same time, as long as they don’t directly contradict each other.
+                        For example, XP-based modes (Slow XP, Very Slow XP, and Quest XP Only) cannot be combined with one another,
+                        while modes like Hardcore or Self-Crafted can be stacked freely.
+                    </p>
+
+                    <p>
+                        Forge your path, test your limits, and see how far you can push a character under the harshest conditions.
+                        After all, glory tastes better when you’ve had to crawl for it.
+                    </p>
+                ',
+            ],
         ];
 
         View::render('features', [

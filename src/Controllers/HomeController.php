@@ -116,11 +116,15 @@ final class HomeController
             $uptimeHuman = implode(' ', $parts);
         }
 
-        $realmName   = null;
-        $realmOnline = false;
+        $realmName        = null;
+        $realmOnline      = false;
+        $staleThreshold   = (int)(getenv('REALM_STATUS_STALE_SEC') ?: 900); // default: 15 minutes
+        if ($staleThreshold < 120) {
+            $staleThreshold = 120;
+        }
         if ($lastHeartbeat !== null) {
             // Worldserver updates the uptime row roughly once per minute; anything older is considered offline.
-            $realmOnline = (time() - $lastHeartbeat) <= 120;
+            $realmOnline = (time() - $lastHeartbeat) <= $staleThreshold;
         }
         if (!$realmOnline) {
             // Show explicit offline state instead of stale uptime.
