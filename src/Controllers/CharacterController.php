@@ -257,7 +257,12 @@ final class CharacterController
 
             $startPayloadCandidates = array_values(array_unique($startPayloadCandidates));
 
-            $combineNarrative = static function (array $row, string $characterName, bool $useGroupNarrative = false): ?string {
+            $combineNarrative = static function (
+                array $row,
+                string $characterName,
+                bool $useGroupNarrative = false,
+                array $groupNames = []
+            ): ?string {
                 if ($useGroupNarrative) {
                     $text = trim((string)($row['group_narrative'] ?? ''));
                     if ($text === '') {
@@ -271,8 +276,34 @@ final class CharacterController
                     return null;
                 }
 
-                $replacer = static function (string $content) use ($characterName): string {
-                    return str_replace('<name>', $characterName, $content);
+                $groupNames = array_values(array_filter(array_map('trim', $groupNames), static function ($v) {
+                    return $v !== '';
+                }));
+
+                $groupList = '';
+                if ($groupNames) {
+                    if (count($groupNames) === 1) {
+                        $groupList = $groupNames[0];
+                    } else {
+                        $last = array_pop($groupNames);
+                        $groupList = implode(', ', $groupNames) . ' and ' . $last;
+                    }
+                }
+
+                $replacer = static function (string $content) use ($characterName, $groupList, $groupNames): string {
+                    $content = str_replace('<name>', $characterName, $content);
+                    if ($groupList !== '') {
+                        $content = str_replace('<group>', $groupList, $content);
+                    }
+                    if (strpos($content, '<member>') !== false) {
+                        if (!empty($groupNames)) {
+                            $randomName = $groupNames[array_rand($groupNames)];
+                            $content = str_replace('<member>', $randomName, $content);
+                        } else {
+                            $content = str_replace('<member>', $characterName, $content);
+                        }
+                    }
+                    return $content;
                 };
 
                 return $replacer($text);
@@ -316,9 +347,11 @@ final class CharacterController
 
             $validLogRows = [];
             $payloadMap   = [];
+            $questIds     = [];
+            $allGroupMemberIds = [];
             foreach ($logRows as $row) {
                 $eventType = strtolower(trim((string)($row['event_type'] ?? '')));
-                if ($eventType === 'quest' || $eventType === 'achievement') {
+                if ($eventType === 'achievement') {
                     continue;
                 }
 
@@ -327,8 +360,39 @@ final class CharacterController
                     continue;
                 }
 
+                $groupMembersRaw = trim((string)($row['group_members'] ?? ''));
+                $groupMemberIds = [];
+                if ($groupMembersRaw !== '') {
+                    if (preg_match_all('/\d+/', $groupMembersRaw, $gmatches)) {
+                        foreach ($gmatches[0] as $gm) {
+                            $gid = (int)$gm;
+                            if ($gid > 0 && $gid !== $guid) {
+                                $groupMemberIds[] = $gid;
+                            }
+                        }
+                    }
+                }
+                if ($groupMemberIds) {
+                    $allGroupMemberIds = array_merge($allGroupMemberIds, $groupMemberIds);
+                }
+
+                if ($eventType === 'quest') {
+                    if (preg_match('/\(ID:\s*(\d+)\)/', $payload, $m)) {
+                        $questId = (int)$m[1];
+                        if ($questId > 0) {
+                            $questIds[] = $questId;
+                            $row['__quest_id'] = $questId;
+                        }
+                    }
+                    if (!isset($row['__quest_id'])) {
+                        continue; // skip malformed quest payload
+                    }
+                } else {
+                    $payloadMap[$payload] = true;
+                }
+
+                $row['__group_member_ids'] = $groupMemberIds;
                 $validLogRows[] = $row;
-                $payloadMap[$payload] = true;
             }
 
             $extrasByPayload = [];
@@ -350,19 +414,69 @@ final class CharacterController
                 }
             }
 
+            $questsById = [];
+            if ($questIds) {
+                $questIds = array_values(array_unique($questIds));
+                $chunks = array_chunk($questIds, 50);
+                foreach ($chunks as $chunk) {
+                    $placeholders = implode(',', array_fill(0, count($chunk), '?'));
+                    $stmt = $pdoChars->prepare("
+                        SELECT payload, narrative, `group narrative` AS group_narrative
+                        FROM character_chronicle_quests
+                        WHERE payload IN ($placeholders)
+                    ");
+                    $stmt->execute($chunk);
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                        $qid = (int)$row['payload'];
+                        $questsById[$qid] = $row;
+                    }
+                }
+            }
+
+            $groupNamesByGuid = [];
+            if ($allGroupMemberIds) {
+                $allGroupMemberIds = array_values(array_unique($allGroupMemberIds));
+                $placeholders = implode(',', array_fill(0, count($allGroupMemberIds), '?'));
+                $stmt = $pdoChars->prepare("
+                    SELECT guid, name
+                    FROM characters
+                    WHERE guid IN ($placeholders)
+                ");
+                $stmt->execute($allGroupMemberIds);
+                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                    $gid = (int)$row['guid'];
+                    $groupNamesByGuid[$gid] = $row['name'] ?? '';
+                }
+            }
+
             foreach ($validLogRows as $row) {
                 $payload = trim((string)($row['event_payload'] ?? ''));
                 if ($payload === '') {
                     continue;
                 }
-                $extraRow = $extrasByPayload[$payload] ?? null;
-                if ($extraRow === null) {
-                    continue;
+                $hasGroupMembers = isset($row['group_members']) && trim((string)$row['group_members']) !== '';
+                $groupMemberIds = $row['__group_member_ids'] ?? [];
+                $groupMemberNames = [];
+                foreach ($groupMemberIds as $gid) {
+                    if (isset($groupNamesByGuid[$gid])) {
+                        $groupMemberNames[] = $groupNamesByGuid[$gid];
+                    }
                 }
 
-                $hasGroupMembers = isset($row['group_members']) && trim((string)$row['group_members']) !== '';
-
-                $text = $combineNarrative($extraRow, $char['name'], $hasGroupMembers);
+                if (isset($row['__quest_id'])) {
+                    $questId = (int)$row['__quest_id'];
+                    $questRow = $questsById[$questId] ?? null;
+                    if ($questRow === null) {
+                        continue;
+                    }
+                    $text = $combineNarrative($questRow, $char['name'], $hasGroupMembers, $groupMemberNames);
+                } else {
+                    $extraRow = $extrasByPayload[$payload] ?? null;
+                    if ($extraRow === null) {
+                        continue;
+                    }
+                    $text = $combineNarrative($extraRow, $char['name'], $hasGroupMembers, $groupMemberNames);
+                }
                 if ($text === null) {
                     continue;
                 }

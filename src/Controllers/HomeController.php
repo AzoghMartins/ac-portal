@@ -28,6 +28,8 @@ final class HomeController
         $rev           = null;
         $lastRestart   = null;
         $uptimeSeconds = null;
+        $startTimestamp = null;
+        $lastHeartbeat  = null;
         try {
             $pdoAuth = Db::pdo($authDb);
             $row = $pdoAuth
@@ -36,11 +38,14 @@ final class HomeController
             if ($row) {
                 $rev           = $row['revision'] ?? null;
                 $uptimeSeconds = isset($row['uptime']) ? (int)$row['uptime'] : null;
-                $start         = isset($row['starttime']) ? (int)$row['starttime'] : null;
-                if ($start) {
-                    $dt = (new DateTimeImmutable('@' . $start))
+                $startTimestamp = isset($row['starttime']) ? (int)$row['starttime'] : null;
+                if ($startTimestamp) {
+                    $dt = (new DateTimeImmutable('@' . $startTimestamp))
                         ->setTimezone(new DateTimeZone(date_default_timezone_get()));
                     $lastRestart = $dt->format('Y-m-d H:i:s');
+                }
+                if ($startTimestamp && $uptimeSeconds !== null) {
+                    $lastHeartbeat = $startTimestamp + $uptimeSeconds;
                 }
             }
         } catch (\Throwable $e) {
@@ -112,7 +117,15 @@ final class HomeController
         }
 
         $realmName   = null;
-        $realmOnline = $uptimeHuman !== null;
+        $realmOnline = false;
+        if ($lastHeartbeat !== null) {
+            // Worldserver updates the uptime row roughly once per minute; anything older is considered offline.
+            $realmOnline = (time() - $lastHeartbeat) <= 120;
+        }
+        if (!$realmOnline) {
+            // Show explicit offline state instead of stale uptime.
+            $uptimeHuman = 'OFFLINE';
+        }
         try {
             $pdo = Db::pdo($authDb);
             $row = $pdo->query("SELECT name FROM realmlist WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
