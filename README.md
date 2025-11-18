@@ -24,3 +24,19 @@ If you want to adapt AC Portal today, be prepared for a deep dive into the codeb
 3. Ensure the extra tables used by character chronicles exist and are populated; the UI expects them by default.
 
 Contributions are welcome once the project is formally opened up. Until then, feel free to explore the code for inspiration or ideas, but deploy it at your own risk. Stay tuned!  
+
+## Admin SOAP Console
+
+GMs (level 3+) can issue worldserver commands from `/admin/soap`. Configure SOAP access in `.env`:
+
+```
+SOAP_HOST=127.0.0.1
+SOAP_PORT=7878
+SOAP_SCHEME=http
+SOAP_URI=urn:ACSOAP
+SOAP_USER=soap_user
+SOAP_PASS=soap_pass
+SOAP_TIMEOUT=10
+```
+
+The SOAP user should be limited to the commands you expect to run (e.g., `reload config`, `server info`). Bind the worldserver SOAP listener to localhost when possible.

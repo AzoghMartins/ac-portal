@@ -1,0 +1,9 @@
+{"ts":1763407724,"user_id":304,"username":"AZOGH","gmlevel":3,"command":"reload config","result":"","error":null}
+{"ts":1763407826,"user_id":304,"username":"AZOGH","gmlevel":3,"command":"server restart","result":null,"error":"SOAP fault: Syntax: .server restart #delay\r\nRestart the server after #delay. Use #exist_code or 2 as program exist code.\n#delay: use a timestring like \"1h15m30s\".\r\nPossible subcommands:\r\n|- server restart cancel\r\n"}
+{"ts":1763407837,"user_id":304,"username":"AZOGH","gmlevel":3,"command":"server shutdown","result":null,"error":"SOAP fault: Syntax: .server shutdown #delay [#exit_code]\r\nShut the server down after #delay. Use #exit_code or 0 as program exit code.\n#delay: use a timestring like \"1h15m30s\".\r\nPossible subcommands:\r\n|- server shutdown cancel\r\n"}
+{"ts":1763407846,"user_id":304,"username":"AZOGH","gmlevel":3,"command":"server shutdown 0","result":null,"error":"SOAP fault: Incorrect values.\r\n"}
+{"ts":1763407854,"user_id":304,"username":"AZOGH","gmlevel":3,"command":"server shutdown 5","result":"","error":null}
+{"ts":1763415561,"user_id":301,"username":"Azogh","gmlevel":3,"command":"server info","result":"AzerothCore rev. 923cccdc2513 2025-11-10 13:52:10 +0100 (Playerbot branch) (Unix, Release, Static)\r\nConnected players: 0. Characters in world: 234.\r\nConnection peak: 0.\r\nServer uptime: 27 second(s)\r\nUpdate time diff: 43ms. Last 257 diffs summary:\r\n|- Mean: 54ms\r\n|- Median: 1ms\r\n|- Percentiles (95, 99, max): 337ms, 826ms, 1752ms","error":null}
+{"ts":1763416474,"user_id":301,"username":"Azogh","gmlevel":3,"command":"reload config","result":"","error":null}
+{"ts":1763417804,"user_id":301,"username":"Azogh","gmlevel":3,"command":"reload config","result":"","error":null}
+{"ts":1763418072,"user_id":301,"username":"Azogh","gmlevel":3,"command":"server restart 5 Config update","result":"","error":null}

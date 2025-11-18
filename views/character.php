@@ -288,6 +288,13 @@ $slotNames = [
                 $itemName = $g['name'] ?? 'Unknown item';
                 $quality  = $g['Quality']   ?? null;
                 $reqLevel = $g['RequiredLevel'] ?? null;
+                $itemLevel= $g['ItemLevel'] ?? null;
+                $armor    = $g['armor'] ?? null;
+                $dmgMin   = isset($g['dmg_min1']) ? (float)$g['dmg_min1'] : null;
+                $dmgMax   = isset($g['dmg_max1']) ? (float)$g['dmg_max1'] : null;
+                $delayMs  = isset($g['delay']) ? (int)$g['delay'] : null;
+                $stats    = $g['stats'] ?? [];
+                $socketColors = $g['socketColors'] ?? [];
 
                 $qualityNames = [
                   0 => 'Poor',
@@ -301,6 +308,55 @@ $slotNames = [
                 ];
                 $qualityLabel = isset($qualityNames[$quality]) ? $qualityNames[$quality] : (string)$quality;
 
+                $statNames = [
+                  3  => 'Agility',
+                  4  => 'Strength',
+                  5  => 'Intellect',
+                  6  => 'Spirit',
+                  7  => 'Stamina',
+                  12 => 'Defense Rating',
+                  13 => 'Dodge Rating',
+                  14 => 'Parry Rating',
+                  15 => 'Block Rating',
+                  16 => 'Hit Rating (melee)',
+                  17 => 'Hit Rating (ranged)',
+                  18 => 'Hit Rating (spell)',
+                  19 => 'Crit Rating (melee)',
+                  20 => 'Crit Rating (ranged)',
+                  21 => 'Crit Rating (spell)',
+                  25 => 'Resilience',
+                  26 => 'Haste Rating (melee)',
+                  27 => 'Haste Rating (ranged)',
+                  28 => 'Haste Rating (spell)',
+                  30 => 'Hit Rating',
+                  31 => 'Crit Rating',
+                  32 => 'Haste Rating',
+                  33 => 'Hit Avoidance',
+                  35 => 'Resilience',
+                  36 => 'Haste Rating',
+                  38 => 'Attack Power',
+                  41 => 'Spell Power',
+                  42 => 'Health Regen',
+                  43 => 'Spell Penetration',
+                  44 => 'Block Value',
+                ];
+
+                $socketName = static function (int $color): string {
+                    $map = [
+                        1 => 'Meta',
+                        2 => 'Red',
+                        4 => 'Yellow',
+                        8 => 'Blue',
+                    ];
+                    return $map[$color] ?? ('Socket '.$color);
+                };
+
+                $dps = null;
+                if ($dmgMin !== null && $dmgMax !== null && $delayMs && $delayMs > 0) {
+                    $avg = ($dmgMin + $dmgMax) / 2;
+                    $dps = $avg / ($delayMs / 1000);
+                }
+
                 // CSS class based on quality (fallback to common if null)
                 $qualityClass = 'quality-' . ($quality !== null ? (int)$quality : 1);
 
@@ -309,22 +365,53 @@ $slotNames = [
                 <td><?= htmlspecialchars($slotName) ?></td>
                 <td class="item-cell <?= htmlspecialchars($qualityClass) ?>">
                   <span class="item-name"><?= htmlspecialchars($itemName) ?></span>
-                  <div class="item-tooltip">
-                    <div class="item-tooltip-name <?= htmlspecialchars($qualityClass) ?>">
-                      <?= htmlspecialchars($itemName) ?>
-                    </div>
-                    <?php if ($reqLevel !== null && (int)$reqLevel > 1): ?>
-                      <div class="item-tooltip-line">
-                        Requires level <?= (int)$reqLevel ?>
+                    <div class="item-tooltip">
+                      <div class="item-tooltip-name <?= htmlspecialchars($qualityClass) ?>">
+                        <?= htmlspecialchars($itemName) ?>
                       </div>
-                    <?php endif; ?>
-                    <div class="item-tooltip-line">Slot: <?= htmlspecialchars($slotName) ?></div>
-                    <?php if ($qualityLabel !== ''): ?>
-                      <div class="item-tooltip-line">Quality: <?= htmlspecialchars($qualityLabel) ?></div>
-                    <?php endif; ?>
-                  </div>
-                </td>
-              </tr>
+                      <?php if ($itemLevel): ?>
+                        <div class="item-tooltip-line">Item Level <?= (int)$itemLevel ?></div>
+                      <?php endif; ?>
+                      <?php if ($reqLevel !== null && (int)$reqLevel > 1): ?>
+                        <div class="item-tooltip-line">
+                          Requires level <?= (int)$reqLevel ?>
+                        </div>
+                      <?php endif; ?>
+                      <?php if ($armor !== null && $armor > 0): ?>
+                        <div class="item-tooltip-line"><?= (int)$armor ?> Armor</div>
+                      <?php endif; ?>
+                      <?php if ($dmgMin !== null && $dmgMax !== null && $delayMs): ?>
+                        <div class="item-tooltip-line">
+                          Damage: <?= number_format($dmgMin, 0) ?> - <?= number_format($dmgMax, 0) ?>
+                        </div>
+                        <div class="item-tooltip-line">
+                          Speed: <?= number_format($delayMs / 1000, 2) ?> s
+                        </div>
+                        <?php if ($dps !== null): ?>
+                          <div class="item-tooltip-line">
+                            DPS: <?= number_format($dps, 1) ?>
+                          </div>
+                        <?php endif; ?>
+                      <?php endif; ?>
+                      <?php if (!empty($stats)): ?>
+                        <?php foreach ($stats as $stat): ?>
+                          <?php
+                            $sType = (int)($stat['type'] ?? 0);
+                            $sVal  = (int)($stat['value'] ?? 0);
+                            $sName = $statNames[$sType] ?? ("Stat {$sType}");
+                          ?>
+                          <div class="item-tooltip-line">+<?= $sVal ?> <?= htmlspecialchars($sName) ?></div>
+                        <?php endforeach; ?>
+                      <?php endif; ?>
+                      <?php if (!empty($socketColors)): ?>
+                        <div class="item-tooltip-line">
+                          Sockets:
+                          <?= htmlspecialchars(implode(', ', array_map($socketName, $socketColors))) ?>
+                        </div>
+                      <?php endif; ?>
+                    </div>
+                  </td>
+                </tr>
             <?php endforeach; ?>
             </tbody>
           </table>
@@ -374,3 +461,33 @@ $slotNames = [
     <a href="/armory">Back to Armory</a>
   </p>
 </div>
+
+<script>
+// Flip tooltips above/below based on viewport position to avoid overflow.
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.item-table .item-cell').forEach(function (cell) {
+    cell.addEventListener('mouseenter', adjustTooltip);
+    cell.addEventListener('mousemove', adjustTooltip);
+  });
+
+  function adjustTooltip(event) {
+    var cell = event.currentTarget;
+    var tooltip = cell.querySelector('.item-tooltip');
+    if (!tooltip) return;
+
+    var rect = cell.getBoundingClientRect();
+    var midY = rect.top + rect.height / 2;
+
+    // Compare against the midpoint of the whole gear table (better than viewport).
+    var table = cell.closest('table');
+    var tableRect = table ? table.getBoundingClientRect() : null;
+    var threshold = tableRect ? (tableRect.top + tableRect.height / 2) : (window.innerHeight / 2);
+
+    if (midY < threshold) {
+      tooltip.classList.add('tooltip-below');
+    } else {
+      tooltip.classList.remove('tooltip-below');
+    }
+  }
+});
+</script>

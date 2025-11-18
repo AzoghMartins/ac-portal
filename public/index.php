@@ -55,6 +55,10 @@ switch ($path) {
         (new \App\Controllers\FeaturesController())();
         break;
 
+    case '/admin/soap':
+        (new \App\Controllers\SoapConsoleController())();
+        break;
+
 
     case '/maintenance':
         if (($_ENV['APP_MAINTENANCE'] ?? 'false') === 'true') {

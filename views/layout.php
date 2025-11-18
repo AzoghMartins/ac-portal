@@ -31,6 +31,7 @@ if (!function_exists('asset_version')) {
   <!-- Page-specific styles -->
   <link rel="stylesheet" href="/assets/css/home.css?v=<?= asset_version('/assets/css/home.css') ?>">
   <link rel="stylesheet" href="/assets/css/auth.css?v=<?= asset_version('/assets/css/auth.css') ?>">
+  <link rel="stylesheet" href="/assets/css/admin.css?v=<?= asset_version('/assets/css/admin.css') ?>">
 
   <!-- Fantasy + Body fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
@@ -56,6 +57,9 @@ if (!function_exists('asset_version')) {
           <li><a href="/">Home</a></li>
           <li><a href="/armory">Armory</a></li>
           <li><a href="/features">Features</a></li>
+          <?php if ($user && ($user['gmlevel'] ?? 0) >= 3): ?>
+            <li><a href="/admin/soap">Admin</a></li>
+          <?php endif; ?>
         </ul>
 
         <div class="nav-right-spacer"></div>

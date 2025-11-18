@@ -187,7 +187,24 @@ final class CharacterController
                             InventoryType,
                             RequiredLevel,
                             class,
-                            subclass
+                            subclass,
+                            armor,
+                            delay,
+                            dmg_min1,
+                            dmg_max1,
+                            socketColor_1,
+                            socketColor_2,
+                            socketColor_3,
+                            stat_type1, stat_value1,
+                            stat_type2, stat_value2,
+                            stat_type3, stat_value3,
+                            stat_type4, stat_value4,
+                            stat_type5, stat_value5,
+                            stat_type6, stat_value6,
+                            stat_type7, stat_value7,
+                            stat_type8, stat_value8,
+                            stat_type9, stat_value9,
+                            stat_type10, stat_value10
                         FROM item_template
                         WHERE entry IN ($placeholders)
                     ");
@@ -203,6 +220,16 @@ final class CharacterController
                             'RequiredLevel' => isset($row['RequiredLevel']) ? (int)$row['RequiredLevel'] : null,
                             'class'         => isset($row['class']) ? (int)$row['class'] : null,
                             'subclass'      => isset($row['subclass']) ? (int)$row['subclass'] : null,
+                            'armor'         => isset($row['armor']) ? (int)$row['armor'] : null,
+                            'delay'         => isset($row['delay']) ? (int)$row['delay'] : null,
+                            'dmg_min1'      => isset($row['dmg_min1']) ? (float)$row['dmg_min1'] : null,
+                            'dmg_max1'      => isset($row['dmg_max1']) ? (float)$row['dmg_max1'] : null,
+                            'socketColors'  => array_filter([
+                                isset($row['socketColor_1']) ? (int)$row['socketColor_1'] : null,
+                                isset($row['socketColor_2']) ? (int)$row['socketColor_2'] : null,
+                                isset($row['socketColor_3']) ? (int)$row['socketColor_3'] : null,
+                            ], static fn($v) => $v !== null && $v > 0),
+                            'stats'         => self::extractStats($row),
                         ];
                     }
                 }
@@ -228,6 +255,12 @@ final class CharacterController
                         'RequiredLevel'=> $tpl['RequiredLevel'] ?? null,
                         'class'        => $tpl['class']         ?? null,
                         'subclass'     => $tpl['subclass']      ?? null,
+                        'armor'        => $tpl['armor']         ?? null,
+                        'delay'        => $tpl['delay']         ?? null,
+                        'dmg_min1'     => $tpl['dmg_min1']      ?? null,
+                        'dmg_max1'     => $tpl['dmg_max1']      ?? null,
+                        'socketColors' => $tpl['socketColors']  ?? [],
+                        'stats'        => $tpl['stats']         ?? [],
                     ];
                 }
             }
@@ -312,7 +345,7 @@ final class CharacterController
             $startRow = null;
             if (!empty($startPayloadCandidates)) {
                 $extraStmt = $pdoChars->prepare("
-                    SELECT payload, narrative, `group narrative` AS group_narrative
+                    SELECT payload, narrative, narrative_group AS group_narrative
                     FROM character_chronicle_extras
                     WHERE payload = :payload
                     LIMIT 1
@@ -402,7 +435,7 @@ final class CharacterController
                 foreach ($chunks as $chunk) {
                     $placeholders = implode(',', array_fill(0, count($chunk), '?'));
                     $stmt = $pdoChars->prepare("
-                        SELECT payload, narrative, `group narrative` AS group_narrative
+                        SELECT payload, narrative, narrative_group AS group_narrative
                         FROM character_chronicle_extras
                         WHERE payload IN ($placeholders)
                     ");
@@ -421,7 +454,7 @@ final class CharacterController
                 foreach ($chunks as $chunk) {
                     $placeholders = implode(',', array_fill(0, count($chunk), '?'));
                     $stmt = $pdoChars->prepare("
-                        SELECT payload, narrative, `group narrative` AS group_narrative
+                        SELECT payload, narrative, narrative_group AS group_narrative
                         FROM character_chronicle_quests
                         WHERE payload IN ($placeholders)
                     ");
@@ -516,5 +549,26 @@ final class CharacterController
             'canModerate'       => $canModerate,
             'chronicleEntries'  => $chronicleEntries,
         ]);
+    }
+
+    /**
+     * Extracts primary stats from an item_template row into a normalized array.
+     *
+     * @param array<string,mixed> $row
+     * @return array<int,array{type:int,value:int}>
+     */
+    private static function extractStats(array $row): array
+    {
+        $stats = [];
+        for ($i = 1; $i <= 10; $i++) {
+            $typeKey  = "stat_type{$i}";
+            $valueKey = "stat_value{$i}";
+            $type     = isset($row[$typeKey]) ? (int)$row[$typeKey] : 0;
+            $value    = isset($row[$valueKey]) ? (int)$row[$valueKey] : 0;
+            if ($type > 0 && $value !== 0) {
+                $stats[] = ['type' => $type, 'value' => $value];
+            }
+        }
+        return $stats;
     }
 }
