@@ -78,10 +78,11 @@ use App\WowHelper;
 
               $raceName  = WowHelper::raceName($raceId);
               $className = WowHelper::className($classId);
+              $charLink  = '/character?name=' . rawurlencode($name);
             ?>
-            <tr class="clickable-row" data-href="/character?guid=<?= $guid ?>">
+            <tr class="clickable-row" data-href="<?= htmlspecialchars($charLink) ?>">
               <td class="char-name">
-                <?= htmlspecialchars($name) ?>
+                <a href="<?= htmlspecialchars($charLink) ?>"><?= htmlspecialchars($name) ?></a>
               </td>
               <td><?= $level ?></td>
               <td><?= htmlspecialchars($raceName) ?></td>

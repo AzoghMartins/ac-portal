@@ -15,7 +15,7 @@ use PDO;
 final class CharacterController
 {
     /**
-     * Entry point for /character?guid=... — aggregates data from multiple databases.
+     * Entry point for /character?name=... (preferred) or /character?guid=... — aggregates data.
      */
     public function __invoke(): void
     {
@@ -23,19 +23,29 @@ final class CharacterController
         $authDb  = Db::env('DB_AUTH', 'acore_auth');
         $worldDb = Db::env('DB_WORLD', 'acore_world');
 
-        $guid = isset($_GET['guid']) ? (int)$_GET['guid'] : 0;
-        if ($guid <= 0) {
-            http_response_code(400);
-            echo 'Invalid character GUID.';
-            return;
-        }
-
         Auth::start();
         $viewer = Auth::user(); // ['id','username','gmlevel','role'] or null
 
+        $nameParam = trim($_GET['name'] ?? '');
+        $guid = isset($_GET['guid']) ? (int)$_GET['guid'] : 0;
+
         $pdoChars = Db::pdo($charsDb);
 
-        // Core character info
+        $where = '';
+        $params = [];
+        if ($nameParam !== '') {
+            $where = 'name = :name';
+            $params[':name'] = $nameParam;
+        } elseif ($guid > 0) {
+            $where = 'guid = :guid';
+            $params[':guid'] = $guid;
+        } else {
+            http_response_code(400);
+            echo 'Invalid character.';
+            return;
+        }
+
+        // Core character info (lookup by name or guid)
         $stmt = $pdoChars->prepare("
             SELECT
                 guid,
@@ -54,10 +64,10 @@ final class CharacterController
                 position_y,
                 position_z
             FROM characters
-            WHERE guid = :guid
+            WHERE $where
             LIMIT 1
         ");
-        $stmt->execute([':guid' => $guid]);
+        $stmt->execute($params);
         $char = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$char) {
@@ -66,6 +76,7 @@ final class CharacterController
             return;
         }
 
+        $guid = (int)$char['guid'];
         $accountId = (int)$char['account'];
         $raceId    = isset($char['race']) ? (int)$char['race'] : 0;
 
@@ -110,7 +121,7 @@ final class CharacterController
         }
 
         $progressionLabels = [
-            0  => 'Tier 0 – Reach level 50',
+            0  => 'Tier 0 – Reach level 60',
             1  => 'Tier 1 – Defeat Ragnaros and Onyxia',
             2  => 'Tier 1 – Defeat Ragnaros and Onyxia',
             3  => 'Tier 2 – Defeat Nefarian',

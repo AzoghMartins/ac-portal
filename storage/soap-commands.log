@@ -7,3 +7,4 @@
 {"ts":1763416474,"user_id":301,"username":"Azogh","gmlevel":3,"command":"reload config","result":"","error":null}
 {"ts":1763417804,"user_id":301,"username":"Azogh","gmlevel":3,"command":"reload config","result":"","error":null}
 {"ts":1763418072,"user_id":301,"username":"Azogh","gmlevel":3,"command":"server restart 5 Config update","result":"","error":null}
+{"ts":1763435858,"user_id":301,"username":"Azogh","gmlevel":3,"command":"server info","result":"AzerothCore rev. 923cccdc2513 2025-11-10 13:52:10 +0100 (Playerbot branch) (Unix, Release, Static)\r\nConnected players: 0. Characters in world: 1500.\r\nConnection peak: 0.\r\nServer uptime: 14 minute(s) 57 second(s)\r\nUpdate time diff: 14ms. Last 500 diffs summary:\r\n|- Mean: 43ms\r\n|- Median: 17ms\r\n|- Percentiles (95, 99, max): 135ms, 152ms, 162ms","error":null}

@@ -172,7 +172,7 @@ $playerCount   = (int)($player_characters ?? 0);
             meaningful, challenging, and true to its original pace.
           </p>
           <p class="feature-link">
-            <a href="/features?section=blizzlike">Learn more →</a>
+            <a href="/features#feature-blizzlike">Learn more →</a>
           </p>
         </div>
 
@@ -183,7 +183,7 @@ $playerCount   = (int)($player_characters ?? 0);
             character completes the trials of previous ages.
           </p>
           <p class="feature-link">
-            <a href="/features?section=progression">Learn more →</a>
+            <a href="/features#feature-progression">Learn more →</a>
           </p>
         </div>
 
@@ -194,7 +194,7 @@ $playerCount   = (int)($player_characters ?? 0);
             corners of the world when others are not around.
           </p>
           <p class="feature-link">
-            <a href="/features?section=playerbots">Learn more →</a>
+            <a href="/features#feature-playerbots">Learn more →</a>
           </p>
         </div>
 
@@ -205,7 +205,7 @@ $playerCount   = (int)($player_characters ?? 0);
             even during quieter hours on the realm.
           </p>
           <p class="feature-link">
-            <a href="/features?section=ahbot">Learn more →</a>
+            <a href="/features#feature-ahbot">Learn more →</a>
           </p>
         </div>
 
@@ -216,7 +216,7 @@ $playerCount   = (int)($player_characters ?? 0);
             into something sharper, slower, or more ruthless.
           </p>
           <p class="feature-link">
-            <a href="/features?section=challenges">Learn more →</a>
+            <a href="/features#feature-challenges">Learn more →</a>
           </p>
         </div>
       </div>

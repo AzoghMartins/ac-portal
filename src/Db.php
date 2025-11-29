@@ -9,7 +9,7 @@ final class Db {
     private static ?array $pool = null;
 
     public static function env(string $k, $d = null) {
-        return $_ENV[$k] ?? $_SERVER[$k] ?? getenv($k) ?: $d;
+        return Config::env($k, $d);
     }
 
     private static function dsn(string $db): string {

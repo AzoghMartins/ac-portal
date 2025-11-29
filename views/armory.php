@@ -87,7 +87,7 @@ use App\WowHelper;
                   $classIcon = WowHelper::classIcon($classId);
 
                   $avgIlvl   = isset($r['avg_ilvl']) ? (float)$r['avg_ilvl'] : null;
-                  $href      = '/character?guid=' . (int)$r['guid'];
+                  $href      = '/character?name=' . rawurlencode($r['name'] ?? '');
             ?>
               <tr class="clickable-row" data-href="<?= htmlspecialchars($href) ?>">
                 <td><?= $rank++ ?></td>
@@ -185,7 +185,7 @@ use App\WowHelper;
       const tr = document.createElement('tr');
       tr.className = 'clickable-row';
 
-      const href = '/character?guid=' + encodeURIComponent(r.guid);
+      const href = '/character?name=' + encodeURIComponent(r.name || '');
       tr.setAttribute('data-href', href);
 
       const nameTd  = document.createElement('td');

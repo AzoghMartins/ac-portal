@@ -50,7 +50,7 @@ final class FeaturesController
                     <ul>
                         <li><strong>Levels 1&ndash;60:</strong> Classic pacing reigns. XP flows slowly, loot tables stay lean, and every green item feels like a relic won from the dark.</li>
                         <li><strong>Levels 60&ndash;70:</strong> The Burning Crusade settings take over, restoring that razor balance between Outland danger and reward.</li>
-                        <li><strong>Levels 70&ndash;90:</strong> Standard Wrath-era rates return, steady enough for endgame campaigns but never generous enough to dull the edge.</li>
+                        <li><strong>Levels 70&ndash;80:</strong> Standard Wrath-era rates return, steady enough for endgame campaigns but never generous enough to dull the edge.</li>
                     </ul>
                     <p>
                         By matching your timeline, leveling remains slower than modern Wrath realms and respectful of the long night between milestones.
@@ -76,7 +76,7 @@ final class FeaturesController
                     </p>
                     <p><strong>VANILLA ERA</strong></p>
                     <ul>
-                        <li><strong>Tier 0:</strong> Reach level 50.</li>
+                        <li><strong>Tier 0:</strong> Reach level 60.</li>
                         <li><strong>Tier 1:</strong> Defeat Ragnaros and Onyxia.</li>
                         <li><strong>Tier 2:</strong> Defeat Nefarian.</li>
                         <li><strong>Tier 3:</strong> Complete <em>Might of Kalimdor</em> or <em>Bang a Gong!</em>.</li>

@@ -11,10 +11,15 @@ if (!function_exists('asset_version')) {
     /**
      * Cache-bust helper for static assets.
      */
-    function asset_version(string $relativePath): int
+    function asset_version(string $relativePath): string
     {
         $fullPath = dirname(__DIR__) . '/public' . $relativePath;
-        return file_exists($fullPath) ? (int)filemtime($fullPath) : time();
+        if (!file_exists($fullPath)) return (string)time();
+
+        $mtime = (int)filemtime($fullPath);
+        $hash  = @md5_file($fullPath) ?: '';
+
+        return $mtime . ($hash !== '' ? '-' . substr($hash, 0, 8) : '');
     }
 }
 ?>
@@ -56,9 +61,12 @@ if (!function_exists('asset_version')) {
         <ul class="nav-center">
           <li><a href="/">Home</a></li>
           <li><a href="/armory">Armory</a></li>
+          <?php if ($user): ?>
+            <li><a href="/auction">Auction</a></li>
+          <?php endif; ?>
           <li><a href="/features">Features</a></li>
           <?php if ($user && ($user['gmlevel'] ?? 0) >= 3): ?>
-            <li><a href="/admin/soap">Admin</a></li>
+            <li><a href="/admin/metrics">Admin</a></li>
           <?php endif; ?>
         </ul>
 
