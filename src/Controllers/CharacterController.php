@@ -146,6 +146,11 @@ final class CharacterController
             $progressionState = 0; // Default to Tier 0 (PROGRESSION_START) when no data is stored yet
         }
 
+        // Fix: detecting Tier 1 visual if actually level 60 but tier is 0
+        if ($progressionState === 0 && (int)$char['level'] >= 60) {
+            $progressionState = 1;
+        }
+
         $progressionLabel = $progressionLabels[$progressionState] ?? sprintf('Tier %d', $progressionState);
 
         // ---------- Gear loading ----------

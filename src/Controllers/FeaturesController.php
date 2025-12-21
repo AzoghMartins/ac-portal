@@ -18,11 +18,11 @@ final class FeaturesController
         // Feature definitions used by the Features page and the home page cards.
         $features = [
             'overview' => [
-                'slug'    => 'overview',
-                'name'    => 'Overview',
-                'pill'    => 'Core Concept',
+                'slug' => 'overview',
+                'name' => 'Overview',
+                'pill' => 'Core Concept',
                 'summary' => 'A lore-aware AzerothCore realm tuned for long-form character stories, not just quick resets.',
-                'body'    => '
+                'body' => '
                     <p>
                         Kardinal WoW is a Wrath of the Lich King realm focused on immersion, continuity,
                         and character-driven progression. The goal is not to race to the end and reroll,
@@ -37,13 +37,13 @@ final class FeaturesController
             ],
 
             'blizzlike' => [
-                'slug'    => 'blizzlike',
-                'name'    => 'Blizzlike Rates',
-                'pill'    => 'Core',
+                'slug' => 'blizzlike',
+                'name' => 'Blizzlike Rates',
+                'pill' => 'Core',
                 'summary' => 'Experience, loot, and item tables shift with the era you inhabit, binding you to the pace of history.',
-                'body'    => '
+                'body' => '
                     <p>
-                        Kardinal keeps <strong>blizzlike rates</strong> but bends them to the expansion your character currently walks through.
+                        Kardinal WoW keeps <strong>blizzlike rates</strong> but bends them to the expansion your character currently walks through.
                         Experience gains, available gear, and drop chances all mirror what Blizzard shipped in that era,
                         so the world feels like the moment it was forged, not a sprint past it.
                     </p>
@@ -63,13 +63,13 @@ final class FeaturesController
             ],
 
             'progression' => [
-                'slug'    => 'progression',
-                'name'    => 'Individual Progression',
-                'pill'    => 'Progression',
+                'slug' => 'progression',
+                'name' => 'Individual Progression',
+                'pill' => 'Progression',
                 'summary' => 'Each hero is locked to a specific patch of WoW history until they master its level, quest, and raid trials.',
-                'body'    => '
+                'body' => '
                     <p>
-                        Kardinal uses the <strong>Individual Progression</strong> system: your character is bound to a specific
+                        Kardinal WoW uses the <strong>Individual Progression</strong> system: your character is bound to a specific
                         patch until they have conquered its requirements. Level caps, dungeon keys, and raid attunements all
                         anchor you in the correct era, and only by defeating that patch&apos;s final boss (or completing its closing quest)
                         does the next slice of history unlock.
@@ -110,11 +110,11 @@ final class FeaturesController
             ],
 
             'playerbots' => [
-                'slug'    => 'playerbots',
-                'name'    => 'PlayerBots',
-                'pill'    => 'World Simulation',
+                'slug' => 'playerbots',
+                'name' => 'PlayerBots',
+                'pill' => 'World Simulation',
                 'summary' => 'Intelligent bots that fill parties, populate the world, and make off-peak hours feel alive.',
-                'body'    => '
+                'body' => '
                     <p>
                         <strong>PlayerBots</strong> are AI-controlled characters that can join your party, run dungeons,
                         and help keep the world active when real players are scarce. Kardinal supports the
@@ -139,11 +139,11 @@ final class FeaturesController
             ],
 
             'ahbot' => [
-                'slug'    => 'ahbot',
-                'name'    => 'Auction House Bot',
-                'pill'    => 'Economy',
+                'slug' => 'ahbot',
+                'name' => 'Auction House Bot',
+                'pill' => 'Economy',
                 'summary' => 'A dynamic auction house bot that keeps essential goods flowing without wrecking the economy.',
-                'body'    => '
+                'body' => '
                     <p>
                         An <strong>AH Bot</strong> keeps the auction house stocked with useful items so that
                         crafting, gearing, and consumable use are always viable — even when the population dips.
@@ -165,11 +165,11 @@ final class FeaturesController
             ],
 
             'challenges' => [
-                'slug'    => 'challenges',
-                'name'    => 'Challenge Modes',
-                'pill'    => 'Rules',
+                'slug' => 'challenges',
+                'name' => 'Challenge Modes',
+                'pill' => 'Rules',
                 'summary' => 'Optional difficulty modifiers you can pledge to at the Shrine of Challenge to reshape your leveling journey.',
-                'body'    => '
+                'body' => '
                     <p>
                         For players who like their adventures with a sharper edge, <strong>Challenge Modes</strong> let you twist the
                         rules of Azeroth to your liking. At the <em>Shrine of Challenge</em>, found near every starting zone graveyard,
@@ -206,7 +206,7 @@ final class FeaturesController
         ];
 
         View::render('features', [
-            'title'    => 'Realm Features',
+            'title' => 'Realm Features',
             'features' => $features,
         ]);
     }
