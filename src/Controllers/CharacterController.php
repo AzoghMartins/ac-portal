@@ -103,43 +103,83 @@ final class CharacterController
         $progressionState = null;
         $progressionLabel = null;
         try {
-            $progStmt = $pdoChars->prepare("
-                SELECT value
-                FROM character_settings
-                WHERE guid = :guid
-                  AND source = 'mod-individual-progression'
-                  AND setting = 0
-                LIMIT 1
-            ");
+            // Some servers may store the progression under a different "setting" value
+            // (not always 0). Prefer the lowest setting for this source so we pick
+            // the canonical progression value when present. Be liberal in parsing
+            // the stored value: it might be a raw number, JSON, or a serialized string.
+                        // Read the progression from the module storage. Some schemas store
+                        // the value in `data` (most common), others in `value` — use COALESCE
+                        // to prefer `value` if present, otherwise fall back to `data`.
+                        $progStmt = $pdoChars->prepare("
+                                SELECT data
+                                FROM character_settings
+                                WHERE guid = :guid
+                                  AND source = 'mod-individual-progression'
+                        ");
             $progStmt->execute([':guid' => $guid]);
-            $value = $progStmt->fetchColumn();
-            if ($value !== false) {
-                $progressionState = (int)$value;
+            $rows = $progStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+            $parsedCandidates = [];
+            foreach ($rows as $valueRaw) {
+                if ($valueRaw === false || $valueRaw === null || $valueRaw === '') {
+                    continue;
+                }
+                $parsed = null;
+                if (is_string($valueRaw)) {
+                    $trim = trim($valueRaw);
+                    $json = json_decode($trim, true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        if (is_int($json)) {
+                            $parsed = $json;
+                        } elseif (is_array($json)) {
+                            if (isset($json['value'])) {
+                                $parsed = (int)$json['value'];
+                            } elseif (isset($json['state'])) {
+                                $parsed = (int)$json['state'];
+                            }
+                        }
+                    }
+
+                    if ($parsed === null) {
+                        if (preg_match('/-?\d+/', $trim, $m)) {
+                            $parsed = (int)$m[0];
+                        }
+                    }
+                } else {
+                    $parsed = (int)$valueRaw;
+                }
+
+                if ($parsed !== null) {
+                    $parsedCandidates[] = (int)$parsed;
+                }
+            }
+
+            if ($parsedCandidates) {
+                $progressionState = max($parsedCandidates);
             }
         } catch (\Throwable $e) {
             $progressionState = null;
         }
 
         $progressionLabels = [
-            0  => 'Tier 0 – Reach level 60',
-            1  => 'Tier 1 – Defeat Ragnaros and Onyxia',
-            2  => 'Tier 1 – Defeat Ragnaros and Onyxia',
-            3  => 'Tier 2 – Defeat Nefarian',
-            4  => 'Tier 3 – Complete Might of Kalimdor or Bang a Gong!',
-            5  => 'Tier 4 – Complete Chaos and Destruction',
-            6  => 'Tier 5 – Defeat C\'thun',
-            7  => 'Tier 6 – Defeat Kel\'thuzad',
-            8  => 'Tier 7 – Complete Into the Breach',
-            9  => 'Tier 8 – Defeat Prince Malchezaar',
-            10 => 'Tier 9 – Defeat Kael\'thas',
-            11 => 'Tier 10 – Defeat Illidan',
-            12 => 'Tier 11 – Defeat Zul\'jin',
-            13 => 'Tier 12 – Defeat Kil\'jaeden',
-            14 => 'Tier 13 – Defeat Kel\'thuzad (Lvl 80)',
-            15 => 'Tier 14 – Defeat Yogg-Saron',
-            16 => 'Tier 15 – Defeat Anub\'arak',
-            17 => 'Tier 16 – Defeat The Lich King',
-            18 => 'Tier 17 – Defeat Halion',
+            0 => 'Tier 0 – Reach level 60',
+            1 => 'Tier 1 – Defeat Ragnaros and Onyxia',
+            2 => 'Tier 2 – Defeat Nefarian',
+            3 => 'Tier 3 – Complete Might of Kalimdor or Bang a Gong!',
+            4 => 'Tier 4 – Complete Chaos and Destruction',
+            5 => 'Tier 5 – Defeat C\'thun',
+            6 => 'Tier 6 – Defeat Kel\'thuzad',
+            7 => 'Tier 7 – Complete Into the Breach',
+            8 => 'Tier 8 – Defeat Prince Malchezaar',
+            9 => 'Tier 9 – Defeat Kael\'thas',
+            10 => 'Tier 10 – Defeat Illidan',
+            11 => 'Tier 11 – Defeat Zul\'jin',
+            12 => 'Tier 12 – Defeat Kil\'jaeden',
+            13 => 'Tier 13 – Defeat Kel\'thuzad (Lvl 80)',
+            14 => 'Tier 14 – Defeat Yogg-Saron',
+            15 => 'Tier 15 – Defeat Anub\'arak',
+            16 => 'Tier 16 – Defeat The Lich King',
+            17 => 'Tier 17 – Defeat Halion',
         ];
 
         if ($progressionState === null) {

@@ -13,6 +13,11 @@ ini_set('display_errors','1');
 $uri  = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $path = rtrim($uri, '/');
 
+if (preg_match('#^/shop/product/([^/]+)$#', $path, $matches)) {
+    (new \App\Controllers\ShopController())->product($matches[1]);
+    exit;
+}
+
 switch ($path) {
     case '':
         (new App\Controllers\HomeController)();
@@ -48,7 +53,19 @@ switch ($path) {
         break;
 
     case '/shop':
-        (new \App\Controllers\ShopController())();
+        (new \App\Controllers\ShopController())->index();
+        break;
+
+    case '/shop/buy':
+        (new \App\Controllers\ShopController())->buy();
+        break;
+
+    case '/shop/ledger':
+        (new \App\Controllers\ShopController())->ledger();
+        break;
+
+    case '/shop/purchases':
+        (new \App\Controllers\ShopController())->purchases();
         break;
 
     case '/features':

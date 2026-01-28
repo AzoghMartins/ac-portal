@@ -98,6 +98,7 @@ final class Config
                     'auth'       => self::baseEnv('DB_AUTH', 'acore_auth'),
                     'world'      => self::baseEnv('DB_WORLD', 'acore_world'),
                     'characters' => self::baseEnv('DB_CHARACTERS', 'acore_characters'),
+                    'portal'     => self::baseEnv('DB_PORTAL', 'ac_portal'),
                 ],
             ],
             'servers' => [
@@ -136,6 +137,7 @@ final class Config
             'DB_AUTH'        => 'db.databases.auth',
             'DB_WORLD'       => 'db.databases.world',
             'DB_CHARACTERS'  => 'db.databases.characters',
+            'DB_PORTAL'      => 'db.databases.portal',
             'AUTH_HOST'      => 'servers.auth.host',
             'AUTH_PORT'      => 'servers.auth.port',
             'WORLD_HOST'     => 'servers.worlds.0.host',

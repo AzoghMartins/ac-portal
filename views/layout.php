@@ -4,8 +4,22 @@
  */
 
 use App\Auth;
+use App\Db;
 
 $user = Auth::user();
+$marksBalance = $marksBalance ?? null;
+
+if ($user && $marksBalance === null) {
+    try {
+        $portalDb = Db::env('DB_PORTAL', 'ac_portal');
+        $pdoPortal = Db::pdo($portalDb);
+        $stmt = $pdoPortal->prepare('SELECT COALESCE(SUM(delta), 0) FROM marks_ledger WHERE account_id = :id');
+        $stmt->execute([':id' => (int)$user['id']]);
+        $marksBalance = (int)$stmt->fetchColumn();
+    } catch (\Throwable $e) {
+        $marksBalance = null;
+    }
+}
 
 if (!function_exists('asset_version')) {
     /**
@@ -37,6 +51,7 @@ if (!function_exists('asset_version')) {
   <link rel="stylesheet" href="/assets/css/home.css?v=<?= asset_version('/assets/css/home.css') ?>">
   <link rel="stylesheet" href="/assets/css/auth.css?v=<?= asset_version('/assets/css/auth.css') ?>">
   <link rel="stylesheet" href="/assets/css/admin.css?v=<?= asset_version('/assets/css/admin.css') ?>">
+  <link rel="stylesheet" href="/assets/css/shop.css?v=<?= asset_version('/assets/css/shop.css') ?>">
 
   <!-- Fantasy + Body fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
@@ -62,6 +77,9 @@ if (!function_exists('asset_version')) {
           <li><a href="/">Home</a></li>
           <li><a href="/armory">Armory</a></li>
           <?php if ($user): ?>
+            <li><a href="/shop">Shop</a></li>
+          <?php endif; ?>
+          <?php if ($user): ?>
             <li><a href="/auction">Auction</a></li>
           <?php endif; ?>
           <li><a href="/features">Features</a></li>
@@ -76,6 +94,9 @@ if (!function_exists('asset_version')) {
           <?php if ($user): ?>
             <span class="nav-username">
               <?= htmlspecialchars($user['username'] ?? '') ?>
+            </span>
+            <span class="nav-marks">
+              <?= $marksBalance !== null ? number_format((int)$marksBalance) : '—' ?> Marks
             </span>
             <a href="/account" class="nav-btn nav-btn--primary">Account</a>
             <a href="/logout" class="nav-btn nav-btn--secondary">Logout</a>
