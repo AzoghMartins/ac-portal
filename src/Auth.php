@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App;
 
 use PDO;
+use App\MarksAwarder;
 
 final class Auth {
     public static function start(): void {
@@ -54,6 +55,7 @@ final class Auth {
         error_log("LOGIN sha path row? " . ($row ? 'yes' : 'no'));
         if ($row) {
             $_SESSION['user'] = self::buildSessionUser((int)$row['id'], $row['username'], $pdo);
+            self::awardMarks((int)$row['id']);
             return true;
         }
     }
@@ -68,12 +70,24 @@ final class Auth {
             $ok = self::srpVerify($u, $p, $row['salt'], $row['verifier']);
             if ($ok) {
                 $_SESSION['user'] = self::buildSessionUser((int)$row['id'], $row['username'], $pdo);
+                self::awardMarks((int)$row['id']);
                 return true;
             }
         }
     }
 
         return false;
+    }
+
+    private static function awardMarks(int $accountId): void {
+        if ($accountId <= 0) {
+            return;
+        }
+        try {
+            MarksAwarder::syncAccount($accountId);
+        } catch (\Throwable $e) {
+            error_log('[AC Portal] Marks awarder failed: ' . $e->getMessage());
+        }
     }
 
     private static function srpVerify(string $username, string $password, string $saltBin, string $verifierBin): bool {

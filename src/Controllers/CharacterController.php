@@ -110,47 +110,71 @@ final class CharacterController
                         // Read the progression from the module storage. Some schemas store
                         // the value in `data` (most common), others in `value` — use COALESCE
                         // to prefer `value` if present, otherwise fall back to `data`.
-                        $progStmt = $pdoChars->prepare("
-                                SELECT data
-                                FROM character_settings
-                                WHERE guid = :guid
-                                  AND source = 'mod-individual-progression'
-                        ");
+            static $settingsCols = null;
+            if ($settingsCols === null) {
+                $settingsCols = [];
+                foreach ($pdoChars->query('SHOW COLUMNS FROM character_settings')->fetchAll(PDO::FETCH_ASSOC) as $col) {
+                    $settingsCols[$col['Field']] = true;
+                }
+            }
+
+            $selectCols = [];
+            if (isset($settingsCols['value'])) {
+                $selectCols[] = 'value';
+            }
+            if (isset($settingsCols['data'])) {
+                $selectCols[] = 'data';
+            }
+            if (!$selectCols) {
+                throw new \RuntimeException('character_settings missing value/data columns.');
+            }
+
+            $progStmt = $pdoChars->prepare(sprintf(
+                "SELECT %s FROM character_settings WHERE guid = :guid AND source = 'mod-individual-progression'",
+                implode(',', $selectCols)
+            ));
             $progStmt->execute([':guid' => $guid]);
-            $rows = $progStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            $rows = $progStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             $parsedCandidates = [];
-            foreach ($rows as $valueRaw) {
-                if ($valueRaw === false || $valueRaw === null || $valueRaw === '') {
-                    continue;
+            foreach ($rows as $row) {
+                $candidates = [];
+                if (isset($row['value']) && $row['value'] !== '' && $row['value'] !== null) {
+                    $candidates[] = $row['value'];
                 }
-                $parsed = null;
-                if (is_string($valueRaw)) {
-                    $trim = trim($valueRaw);
-                    $json = json_decode($trim, true);
-                    if (json_last_error() === JSON_ERROR_NONE) {
-                        if (is_int($json)) {
-                            $parsed = $json;
-                        } elseif (is_array($json)) {
-                            if (isset($json['value'])) {
-                                $parsed = (int)$json['value'];
-                            } elseif (isset($json['state'])) {
-                                $parsed = (int)$json['state'];
+                if (isset($row['data']) && $row['data'] !== '' && $row['data'] !== null) {
+                    $candidates[] = $row['data'];
+                }
+
+                foreach ($candidates as $candidate) {
+                    $parsed = null;
+                    if (is_string($candidate)) {
+                        $trim = trim($candidate);
+                        $json = json_decode($trim, true);
+                        if (json_last_error() === JSON_ERROR_NONE) {
+                            if (is_int($json)) {
+                                $parsed = $json;
+                            } elseif (is_array($json)) {
+                                if (isset($json['value'])) {
+                                    $parsed = (int)$json['value'];
+                                } elseif (isset($json['state'])) {
+                                    $parsed = (int)$json['state'];
+                                }
                             }
                         }
-                    }
 
-                    if ($parsed === null) {
-                        if (preg_match('/-?\d+/', $trim, $m)) {
-                            $parsed = (int)$m[0];
+                        if ($parsed === null) {
+                            if (preg_match('/-?\d+/', $trim, $m)) {
+                                $parsed = (int)$m[0];
+                            }
                         }
+                    } else {
+                        $parsed = (int)$candidate;
                     }
-                } else {
-                    $parsed = (int)$valueRaw;
-                }
 
-                if ($parsed !== null) {
-                    $parsedCandidates[] = (int)$parsed;
+                    if ($parsed !== null) {
+                        $parsedCandidates[] = (int)$parsed;
+                    }
                 }
             }
 

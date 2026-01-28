@@ -20,7 +20,7 @@ $newPurchaseId = isset($newPurchaseId) ? (int)$newPurchaseId : null;
 
   <?php if ($newPurchaseId): ?>
     <div class="shop-alert shop-alert--success">
-      Purchase #<?= $newPurchaseId ?> received and queued for fulfillment.
+      Purchase #<?= $newPurchaseId ?> received and queued for fulfillment. Please log out and log back in for changes to take effect.
     </div>
   <?php endif; ?>
 

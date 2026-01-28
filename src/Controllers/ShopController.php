@@ -179,6 +179,7 @@ final class ShopController
                     } else {
                         $price = (int)($preview['price'] ?? 0);
                         $details['tier_skip'] = $preview;
+                        $details['payload'] = $this->buildTierPayload($selectedCharacter, $targetTier, $preview);
                     }
                 }
             } else {
@@ -240,14 +241,18 @@ final class ShopController
                 ':purchase_id' => $purchaseId,
             ]);
 
+            $payload = $details['payload'] ?? null;
+            $payloadJson = $payload ? json_encode($payload, JSON_UNESCAPED_SLASHES) : null;
+
             $fulfillStmt = $pdo->prepare('
                 INSERT INTO shop_fulfillment
-                  (purchase_id, status)
+                  (purchase_id, payload_json, status)
                 VALUES
-                  (:purchase_id, :status)
+                  (:purchase_id, :payload_json, :status)
             ');
             $fulfillStmt->execute([
                 ':purchase_id' => $purchaseId,
+                ':payload_json' => $payloadJson,
                 ':status' => 'queued',
             ]);
 
@@ -354,6 +359,7 @@ final class ShopController
             'maxTierSkip' => self::MAX_TIER_SKIP,
             'tierObjectives' => $this->tierObjectives(),
             'tierTotals' => $selectedCharacter ? $this->tierSkipTotals($selectedCharacter) : [],
+            'orderedTiers' => $this->orderedTiers(),
             'nextProgressionLabel' => $nextProgressionLabel,
         ]);
     }
@@ -426,47 +432,71 @@ final class ShopController
     {
         $progressionState = null;
         try {
-            $progStmt = $pdoChars->prepare('
-                SELECT data
-                FROM character_settings
-                WHERE guid = :guid
-                  AND source = \"mod-individual-progression\"
-            ');
+            static $settingsCols = null;
+            if ($settingsCols === null) {
+                $settingsCols = [];
+                foreach ($pdoChars->query('SHOW COLUMNS FROM character_settings')->fetchAll(PDO::FETCH_ASSOC) as $col) {
+                    $settingsCols[$col['Field']] = true;
+                }
+            }
+
+            $selectCols = [];
+            if (isset($settingsCols['value'])) {
+                $selectCols[] = 'value';
+            }
+            if (isset($settingsCols['data'])) {
+                $selectCols[] = 'data';
+            }
+            if (!$selectCols) {
+                throw new \RuntimeException('character_settings missing value/data columns.');
+            }
+
+            $progStmt = $pdoChars->prepare(sprintf(
+                "SELECT %s FROM character_settings WHERE guid = :guid AND source = 'mod-individual-progression'",
+                implode(',', $selectCols)
+            ));
             $progStmt->execute([':guid' => $guid]);
-            $rows = $progStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            $rows = $progStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             $parsedCandidates = [];
-            foreach ($rows as $valueRaw) {
-                if ($valueRaw === false || $valueRaw === null || $valueRaw === '') {
-                    continue;
+            foreach ($rows as $row) {
+                $candidates = [];
+                if (isset($row['value']) && $row['value'] !== '' && $row['value'] !== null) {
+                    $candidates[] = $row['value'];
                 }
-                $parsed = null;
-                if (is_string($valueRaw)) {
-                    $trim = trim($valueRaw);
-                    $json = json_decode($trim, true);
-                    if (json_last_error() === JSON_ERROR_NONE) {
-                        if (is_int($json)) {
-                            $parsed = $json;
-                        } elseif (is_array($json)) {
-                            if (isset($json['value'])) {
-                                $parsed = (int)$json['value'];
-                            } elseif (isset($json['state'])) {
-                                $parsed = (int)$json['state'];
+                if (isset($row['data']) && $row['data'] !== '' && $row['data'] !== null) {
+                    $candidates[] = $row['data'];
+                }
+
+                foreach ($candidates as $candidate) {
+                    $parsed = null;
+                    if (is_string($candidate)) {
+                        $trim = trim($candidate);
+                        $json = json_decode($trim, true);
+                        if (json_last_error() === JSON_ERROR_NONE) {
+                            if (is_int($json)) {
+                                $parsed = $json;
+                            } elseif (is_array($json)) {
+                                if (isset($json['value'])) {
+                                    $parsed = (int)$json['value'];
+                                } elseif (isset($json['state'])) {
+                                    $parsed = (int)$json['state'];
+                                }
                             }
                         }
-                    }
 
-                    if ($parsed === null) {
-                        if (preg_match('/-?\d+/', $trim, $m)) {
-                            $parsed = (int)$m[0];
+                        if ($parsed === null) {
+                            if (preg_match('/-?\d+/', $trim, $m)) {
+                                $parsed = (int)$m[0];
+                            }
                         }
+                    } else {
+                        $parsed = (int)$candidate;
                     }
-                } else {
-                    $parsed = (int)$valueRaw;
-                }
 
-                if ($parsed !== null) {
-                    $parsedCandidates[] = (int)$parsed;
+                    if ($parsed !== null) {
+                        $parsedCandidates[] = (int)$parsed;
+                    }
                 }
             }
 
@@ -521,6 +551,55 @@ final class ShopController
         }
         $base = (int)$targetTier;
         return $this->progressionLabel($base + 1);
+    }
+
+    private function buildTierPayload(array $character, string $targetTier, array $preview): array
+    {
+        $currentTier = (int)($character['progression_state'] ?? 0);
+        $resultTier = $targetTier === '7.5' ? 8 : ((int)$targetTier + 1);
+
+        $includes75 = false;
+        $includes01 = false;
+        $breakdown = $preview['breakdown'] ?? [];
+        foreach ($breakdown as $row) {
+            $tierKey = isset($row['tier']) ? (string)$row['tier'] : '';
+            if ($tierKey === '7.5') {
+                $includes75 = true;
+            }
+            if ($tierKey === '0' || $tierKey === '1') {
+                $includes01 = true;
+            }
+        }
+
+        $boostLevel = null;
+        $gearProfile = null;
+        if ($includes75 && (int)$character['level'] < 70) {
+            $boostLevel = 70;
+            $gearProfile = 'boost70_class_generic';
+        } elseif ($includes01 && (int)$character['level'] < 60) {
+            $boostLevel = 60;
+            $gearProfile = 'boost60_class_generic';
+        }
+
+        $goldCopper = 0;
+        if ($includes01) {
+            $goldCopper += 5000000;
+        }
+        if ($includes75) {
+            $goldCopper += 5000000;
+        }
+
+        return [
+            'action' => 'tier_purchase',
+            'current_tier' => $currentTier,
+            'skip_to_tier' => $targetTier,
+            'result_tier' => $resultTier,
+            'boost' => [
+                'target_level' => $boostLevel,
+                'gear_profile' => $gearProfile,
+            ],
+            'gold_copper' => $goldCopper,
+        ];
     }
 
     private function tierSkipPreview(array $character, string $targetTier): array
@@ -655,7 +734,7 @@ final class ShopController
         if ($targetTier === '7.5') {
             $includeBridge = true;
         } elseif ($idx7 !== false && $idx8 !== false) {
-            if ($currentIdx <= $idx7 && $targetIdx >= $idx8 && $level < 70) {
+            if ($currentIdx <= $idx7 && $targetIdx >= $idx8) {
                 $includeBridge = true;
             }
         }

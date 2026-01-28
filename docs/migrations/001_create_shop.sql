@@ -41,15 +41,34 @@ CREATE TABLE IF NOT EXISTS marks_ledger (
     KEY idx_marks_ledger_purchase (purchase_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS character_tier_awards (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    character_guid  INT UNSIGNED    NOT NULL,
+    account_id      INT UNSIGNED    NOT NULL,
+    tier            VARCHAR(8)      NOT NULL,
+    source          ENUM('earned','skipped') NOT NULL,
+    purchase_id     BIGINT UNSIGNED NULL,
+    created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_character_tier (character_guid, tier),
+    KEY idx_character_tier_account (account_id, created_at),
+    KEY idx_character_tier_purchase (purchase_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS shop_fulfillment (
     id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     purchase_id BIGINT UNSIGNED NOT NULL,
+    payload_json JSON           NULL,
     status      VARCHAR(20)     NOT NULL DEFAULT 'queued',
+    last_error  TEXT            NULL,
+    attempt_count INT UNSIGNED  NOT NULL DEFAULT 0,
+    applied_at  TIMESTAMP       NULL DEFAULT NULL,
     notes       VARCHAR(255)    NULL,
     created_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY uniq_shop_fulfillment_purchase (purchase_id)
+    UNIQUE KEY uniq_shop_fulfillment_purchase (purchase_id),
+    KEY idx_shop_fulfillment_status (status, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Seed products

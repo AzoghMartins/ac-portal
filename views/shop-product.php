@@ -13,6 +13,7 @@
  * @var int $maxTierSkip
  * @var array $tierObjectives
  * @var array $tierTotals
+ * @var array $orderedTiers
  * @var string|null $nextProgressionLabel
  */
 
@@ -25,7 +26,40 @@ $marksBalance = isset($marksBalance) ? (int)$marksBalance : 0;
 $maxTierSkip = isset($maxTierSkip) ? (int)$maxTierSkip : 12;
 $tierObjectives = $tierObjectives ?? [];
 $tierTotals = $tierTotals ?? [];
+$orderedTiers = $orderedTiers ?? [];
 $nextProgressionLabel = $nextProgressionLabel ?? null;
+$tierOptions = [];
+$currentKey = $selectedCharacter ? (string)$selectedCharacter['progression_state'] : null;
+$currentIndex = ($currentKey !== null && $orderedTiers) ? array_search($currentKey, $orderedTiers, true) : null;
+
+if ($selectedCharacter) {
+  if ($currentIndex === null) {
+      $tierOptions = [];
+  } else {
+  foreach ($tierObjectives as $row) {
+      $tierValue = (string)($row['tier'] ?? '');
+      if ($tierValue === '') {
+          continue;
+      }
+      if (empty($row['selectable'])) {
+          continue;
+      }
+      $tierIndex = $orderedTiers ? array_search($tierValue, $orderedTiers, true) : null;
+      if ($currentIndex !== null && $tierIndex !== null && $tierIndex < $currentIndex) {
+          continue;
+      }
+      $totalCost = $tierTotals[$tierValue] ?? null;
+      if ($totalCost === null) {
+          continue;
+      }
+      $tierOptions[] = [
+          'tier' => $tierValue,
+          'objective' => (string)($row['objective'] ?? ''),
+          'total' => (int)$totalCost,
+      ];
+  }
+  }
+}
 
 $sku = $product['sku'] ?? '';
 $isTierSkip = ($product['price_type'] ?? '') === 'tier_skip';
@@ -144,33 +178,25 @@ $showPurchaseButton = !$isTierSkip || ($targetTier !== null && $targetTier !== '
           </label>
         <?php endif; ?>
 
-        <?php if ($isTierSkip && $selectedCharacter): ?>
+        <?php if ($isTierSkip && $selectedCharacter && !empty($tierOptions)): ?>
           <label>
             Desired Tier to Auto Complete (Max <?= $maxTierSkip ?>)
             <select name="target_tier" id="tier-target-select" required>
               <option value="">Select tier</option>
-              <?php foreach ($tierObjectives as $row): ?>
+              <?php foreach ($tierOptions as $opt): ?>
                 <?php
-                  $tierValue = (string)($row['tier'] ?? '');
-                  $selectable = !empty($row['selectable']);
-                  $totalCost = $tierTotals[$tierValue] ?? null;
-                  $available = $totalCost !== null;
-                  $labelParts = [];
-                  $labelParts[] = (string)($row['objective'] ?? '');
-                  if ($available) {
-                      $labelParts[] = '(Total ' . number_format((int)$totalCost) . ' Marks)';
-                  } else {
-                      $labelParts[] = '(Unavailable)';
-                  }
-                  $label = implode(' ', $labelParts);
-                  $selected = $selectable && $available && $targetTier !== null && (string)$targetTier === $tierValue;
+                  $tierValue = (string)$opt['tier'];
+                  $label = $opt['objective'] . ' (Total ' . number_format((int)$opt['total']) . ' Marks)';
+                  $selected = $targetTier !== null && (string)$targetTier === $tierValue;
                 ?>
-                <option value="<?= ($selectable && $available) ? htmlspecialchars($tierValue) : '' ?>" <?= $selected ? 'selected' : '' ?> <?= ($selectable && $available) ? '' : 'disabled' ?>>
+                <option value="<?= htmlspecialchars($tierValue) ?>" <?= $selected ? 'selected' : '' ?>>
                   <?= htmlspecialchars($label) ?>
                 </option>
               <?php endforeach; ?>
             </select>
           </label>
+        <?php elseif ($isTierSkip && $selectedCharacter): ?>
+          <p class="muted">No tier advancement options are available for this character.</p>
         <?php elseif ($isTierSkip): ?>
           <p class="muted">Select a character to load available tier completion options.</p>
         <?php endif; ?>

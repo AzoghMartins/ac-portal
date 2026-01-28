@@ -1,0 +1,15 @@
+[Unit]
+Description=AC Portal Shop Fulfillment Worker
+After=network.target
+
+[Service]
+Type=simple
+User=azoghmartins
+Group=azoghmartins
+WorkingDirectory=/srv/www/ac-portal
+ExecStart=/usr/bin/php /srv/www/ac-portal/scripts/fulfillment-worker.php --limit=0
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
