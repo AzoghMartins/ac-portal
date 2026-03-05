@@ -57,7 +57,11 @@ $selectedGuid = isset($selectedGuid) ? (int)$selectedGuid : null;
               <?php
                 $cardDesc = $product['description'] ?? '';
                 if (($product['sku'] ?? '') === 'TIER_SKIP') {
-                    $cardDesc = 'Spend Marks to skip selected pre-Wrath Tier Locks and advance through earlier progression.';
+                    $cardDesc = 'Skip selected Tier Locks from Tier 1 to Tier 12. Tier 0 and Tier 7.5 boosts are separate products.';
+                } elseif (($product['sku'] ?? '') === 'BOOST_60') {
+                    $cardDesc = 'Standalone Tier 0 boost: set a character to level 60 and provide starter gear.';
+                } elseif (($product['sku'] ?? '') === 'BOOST_70') {
+                    $cardDesc = 'Standalone Tier 7.5 boost: set a Tier 7 character to level 70 and provide starter gear.';
                 }
               ?>
               <p class="shop-product-desc"><?= htmlspecialchars($cardDesc) ?></p>

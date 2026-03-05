@@ -14,15 +14,13 @@ use PDO;
 final class ShopController
 {
     private const TIER_SKIP_COSTS = [
-        '0'   => 25,
         '1'   => 40,
         '2'   => 55,
         '3'   => 70,
-        '4'   => 55,
+        '4'   => 0,
         '5'   => 65,
         '6'   => 85,
         '7'   => 25,
-        '7.5' => 100,
         '8'   => 75,
         '9'   => 110,
         '10'  => 110,
@@ -32,7 +30,8 @@ final class ShopController
 
     private const MAX_TIER_SKIP = 12;
     private const SKU_TIER_SKIP = 'TIER_SKIP';
-    private const SKU_START_TBC = 'START_TBC_AT_60';
+    private const SKU_BOOST_60 = 'BOOST_60';
+    private const SKU_BOOST_70 = 'BOOST_70';
 
     public function __invoke(): void
     {
@@ -75,7 +74,9 @@ final class ShopController
             return;
         }
 
-        $characters = $this->accountCharacters($accountId);
+        $includeProgressionInList = ((string)($product['sku'] ?? '') === self::SKU_BOOST_70);
+        $characters = $this->accountCharacters($accountId, $includeProgressionInList);
+        $characters = $this->filterCharactersForProduct($characters, $product);
         $selectedGuid = isset($_GET['guid']) ? (int)$_GET['guid'] : null;
         $targetTier = $this->normalizeTierInput($_GET['target_tier'] ?? null);
 
@@ -91,10 +92,13 @@ final class ShopController
         }
 
         if ($product['sku'] === self::SKU_TIER_SKIP && $selectedCharacter && $targetTier !== null) {
-            $preview = $this->tierSkipPreview($selectedCharacter, $targetTier);
-            if (isset($preview['error'])) {
-                $error = $preview['error'];
-                $preview = null;
+            $error = $this->tierSkipLevelRequirementError($selectedCharacter, $targetTier);
+            if ($error === null) {
+                $preview = $this->tierSkipPreview($selectedCharacter, $targetTier);
+                if (isset($preview['error'])) {
+                    $error = $preview['error'];
+                    $preview = null;
+                }
             }
         }
 
@@ -127,7 +131,9 @@ final class ShopController
             return;
         }
 
-        $characters = $this->accountCharacters($accountId);
+        $includeProgressionInList = ((string)($product['sku'] ?? '') === self::SKU_BOOST_70);
+        $characters = $this->accountCharacters($accountId, $includeProgressionInList);
+        $characters = $this->filterCharactersForProduct($characters, $product);
         $selectedGuid = isset($_POST['character_guid']) ? (int)$_POST['character_guid'] : null;
         $targetTier = $this->normalizeTierInput($_POST['target_tier'] ?? null);
 
@@ -166,6 +172,20 @@ final class ShopController
                 $price = isset($product['price_marks']) ? (int)$product['price_marks'] : null;
                 if ($price === null || $price <= 0) {
                     $error = 'Product price is not configured.';
+                } elseif ($product['sku'] === self::SKU_BOOST_60) {
+                    $eligibilityError = $this->boost60RequirementError($selectedCharacter);
+                    if ($eligibilityError !== null) {
+                        $error = $eligibilityError;
+                    } else {
+                        $details['payload'] = $this->buildBoost60Payload($selectedCharacter);
+                    }
+                } elseif ($product['sku'] === self::SKU_BOOST_70) {
+                    $eligibilityError = $this->boost70RequirementError($selectedCharacter);
+                    if ($eligibilityError !== null) {
+                        $error = $eligibilityError;
+                    } else {
+                        $details['payload'] = $this->buildBoost70Payload($selectedCharacter);
+                    }
                 }
             } elseif ($product['price_type'] === 'tier_skip') {
                 if (!$selectedCharacter) {
@@ -173,13 +193,18 @@ final class ShopController
                 } elseif ($targetTier === null) {
                     $error = 'Select a desired tier to auto complete.';
                 } else {
-                    $preview = $this->tierSkipPreview($selectedCharacter, $targetTier);
-                    if (isset($preview['error'])) {
-                        $error = $preview['error'];
+                    $levelError = $this->tierSkipLevelRequirementError($selectedCharacter, $targetTier);
+                    if ($levelError !== null) {
+                        $error = $levelError;
                     } else {
-                        $price = (int)($preview['price'] ?? 0);
-                        $details['tier_skip'] = $preview;
-                        $details['payload'] = $this->buildTierPayload($selectedCharacter, $targetTier, $preview);
+                        $preview = $this->tierSkipPreview($selectedCharacter, $targetTier);
+                        if (isset($preview['error'])) {
+                            $error = $preview['error'];
+                        } else {
+                            $price = (int)($preview['price'] ?? 0);
+                            $details['tier_skip'] = $preview;
+                            $details['payload'] = $this->buildTierPayload($selectedCharacter, $targetTier);
+                        }
                     }
                 }
             } else {
@@ -392,7 +417,7 @@ final class ShopController
         return $row ?: null;
     }
 
-    private function accountCharacters(int $accountId): array
+    private function accountCharacters(int $accountId, bool $includeProgression = false): array
     {
         $charsDb = Db::env('DB_CHARACTERS', 'acore_characters');
         $pdoChars = Db::pdo($charsDb);
@@ -403,7 +428,38 @@ final class ShopController
             ORDER BY level DESC, name ASC
         ');
         $stmt->execute([':acct' => $accountId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        if ($includeProgression) {
+            foreach ($rows as &$row) {
+                $guid = (int)($row['guid'] ?? 0);
+                $level = (int)($row['level'] ?? 1);
+                $row['progression_state'] = $this->progressionState($pdoChars, $guid, $level);
+            }
+            unset($row);
+        }
+
+        return $rows;
+    }
+
+    private function filterCharactersForProduct(array $characters, array $product): array
+    {
+        $sku = (string)($product['sku'] ?? '');
+
+        if ($sku === self::SKU_BOOST_60) {
+            return array_values(array_filter($characters, static function (array $char): bool {
+                return (int)($char['level'] ?? 0) < 60;
+            }));
+        }
+
+        if ($sku === self::SKU_BOOST_70) {
+            return array_values(array_filter($characters, static function (array $char): bool {
+                return (int)($char['level'] ?? 0) < 70
+                    && (int)($char['progression_state'] ?? 0) >= 7;
+            }));
+        }
+
+        return $characters;
     }
 
     private function loadCharacter(int $guid, int $accountId): ?array
@@ -553,61 +609,60 @@ final class ShopController
         return $this->progressionLabel($base + 1);
     }
 
-    private function buildTierPayload(array $character, string $targetTier, array $preview): array
+    private function buildTierPayload(array $character, string $targetTier): array
     {
         $currentTier = (int)($character['progression_state'] ?? 0);
-        $resultTier = $targetTier === '7.5' ? 8 : ((int)$targetTier + 1);
-
-        $includes75 = false;
-        $includes01 = false;
-        $breakdown = $preview['breakdown'] ?? [];
-        foreach ($breakdown as $row) {
-            $tierKey = isset($row['tier']) ? (string)$row['tier'] : '';
-            if ($tierKey === '7.5') {
-                $includes75 = true;
-            }
-            if ($tierKey === '0' || $tierKey === '1') {
-                $includes01 = true;
-            }
-        }
-
-        $boostLevel = null;
-        $gearProfile = null;
-        if ($includes75 && (int)$character['level'] < 70) {
-            $boostLevel = 70;
-            $gearProfile = 'boost70_class_generic';
-        } elseif ($includes01 && (int)$character['level'] < 60) {
-            $boostLevel = 60;
-            $gearProfile = 'boost60_class_generic';
-        }
-
-        $goldCopper = 0;
-        if ($includes01) {
-            $goldCopper += 5000000;
-        }
-        if ($includes75) {
-            $goldCopper += 5000000;
-        }
 
         return [
             'action' => 'tier_purchase',
             'current_tier' => $currentTier,
             'skip_to_tier' => $targetTier,
-            'result_tier' => $resultTier,
+            'result_tier' => ((int)$targetTier + 1),
             'boost' => [
-                'target_level' => $boostLevel,
-                'gear_profile' => $gearProfile,
+                'target_level' => null,
+                'gear_profile' => null,
             ],
-            'gold_copper' => $goldCopper,
+            'gold_copper' => 0,
+        ];
+    }
+
+    private function buildBoost60Payload(array $character): array
+    {
+        $currentTier = (int)($character['progression_state'] ?? 0);
+        return [
+            'action' => 'tier_purchase',
+            'current_tier' => $currentTier,
+            'skip_to_tier' => '0',
+            'result_tier' => 1,
+            'boost' => [
+                'target_level' => 60,
+                'gear_profile' => 'boost60_class_generic',
+            ],
+            'gold_copper' => 5000000,
+        ];
+    }
+
+    private function buildBoost70Payload(array $character): array
+    {
+        $currentTier = (int)($character['progression_state'] ?? 0);
+        return [
+            'action' => 'tier_purchase',
+            'current_tier' => $currentTier,
+            'skip_to_tier' => '7.5',
+            'result_tier' => 8,
+            'boost' => [
+                'target_level' => 70,
+                'gear_profile' => 'boost70_class_generic',
+            ],
+            'gold_copper' => 5000000,
         ];
     }
 
     private function tierSkipPreview(array $character, string $targetTier): array
     {
         $currentTier = (int)($character['progression_state'] ?? 0);
-        $level = (int)($character['level'] ?? 1);
 
-        $calculated = $this->tierSkipCalculation($currentTier, $level, $targetTier);
+        $calculated = $this->tierSkipCalculation($currentTier, $targetTier);
         if (isset($calculated['error'])) {
             return $calculated;
         }
@@ -615,8 +670,56 @@ final class ShopController
         return array_merge($calculated, [
             'current_tier' => $currentTier,
             'target_tier' => $targetTier,
-            'level' => $level,
+            'level' => (int)($character['level'] ?? 1),
         ]);
+    }
+
+    private function boost60RequirementError(?array $character): ?string
+    {
+        if (!$character) {
+            return 'Select a character for this purchase.';
+        }
+
+        $level = (int)($character['level'] ?? 0);
+        if ($level >= 60) {
+            return 'This product is only available for characters below level 60.';
+        }
+
+        return null;
+    }
+
+    private function boost70RequirementError(?array $character): ?string
+    {
+        if (!$character) {
+            return 'Select a character for this purchase.';
+        }
+
+        $level = (int)($character['level'] ?? 0);
+        if ($level >= 70) {
+            return 'This product is only available for characters below level 70.';
+        }
+
+        $progressionState = (int)($character['progression_state'] ?? 0);
+        if ($progressionState < 7) {
+            return 'This product requires a character at Tier 7 progression or higher.';
+        }
+
+        return null;
+    }
+
+    private function tierSkipLevelRequirementError(array $character, string $targetTier): ?string
+    {
+        $requiredLevel = ((int)$targetTier <= 7) ? 60 : 70;
+        $characterLevel = (int)($character['level'] ?? 1);
+        if ($characterLevel < $requiredLevel) {
+            return sprintf(
+                'Level %d is required to skip to Tier %s.',
+                $requiredLevel,
+                $targetTier
+            );
+        }
+
+        return null;
     }
 
     private function marksBalance(int $accountId, ?PDO $pdo = null, bool $forUpdate = false): int
@@ -639,7 +742,6 @@ final class ShopController
     private function tierObjectives(): array
     {
         $tiers = [
-            ['tier' => '0', 'objective' => 'Character is set to level 60 and recieve level appropriate gear.', 'selectable' => true],
             ['tier' => '1', 'objective' => 'Ragnaros and Onyxia is marked as defeated.', 'selectable' => true],
             ['tier' => '2', 'objective' => 'Nefarian is marked as defeated.', 'selectable' => true],
             ['tier' => '3', 'objective' => 'Might of Kalimdor or Bang a Gong! is marked as completed.', 'selectable' => true],
@@ -647,7 +749,6 @@ final class ShopController
             ['tier' => '5', 'objective' => 'C\'thun is marked as defeated.', 'selectable' => true],
             ['tier' => '6', 'objective' => 'Kel\'thuzad is marked as defeated.', 'selectable' => true],
             ['tier' => '7', 'objective' => 'The Dark Portal is opened and TBC is accessable.', 'selectable' => true],
-            ['tier' => '7.5', 'objective' => 'Character is set to level 70 and recieve level appropriate gear.', 'selectable' => true],
             ['tier' => '8', 'objective' => 'Prince Malchezaar is marked as defeated.', 'selectable' => true],
             ['tier' => '9', 'objective' => 'Kael\'thas is marked as defeated.', 'selectable' => true],
             ['tier' => '10', 'objective' => 'Illidan is marked as defeated.', 'selectable' => true],
@@ -689,7 +790,6 @@ final class ShopController
     {
         $totals = [];
         $currentTier = (int)($character['progression_state'] ?? 0);
-        $level = (int)($character['level'] ?? 1);
 
         foreach ($this->tierObjectives() as $row) {
             if (empty($row['selectable'])) {
@@ -699,7 +799,7 @@ final class ShopController
             if ($tierKey === '') {
                 continue;
             }
-            $calc = $this->tierSkipCalculation($currentTier, $level, $tierKey);
+            $calc = $this->tierSkipCalculation($currentTier, $tierKey);
             if (isset($calc['error'])) {
                 $totals[$tierKey] = null;
                 continue;
@@ -711,9 +811,9 @@ final class ShopController
     }
 
     /**
-     * @return array{price?:int,breakdown?:array,bridge_added?:bool,error?:string}
+     * @return array{price?:int,breakdown?:array,error?:string}
      */
-    private function tierSkipCalculation(int $currentTier, int $level, string $targetTier): array
+    private function tierSkipCalculation(int $currentTier, string $targetTier): array
     {
         $ordered = $this->orderedTiers();
         $currentIdx = array_search((string)$currentTier, $ordered, true);
@@ -726,27 +826,11 @@ final class ShopController
             return ['error' => 'Desired tier must be at or above the current progression tier.'];
         }
 
-        $idx7 = array_search('7', $ordered, true);
-        $idx75 = array_search('7.5', $ordered, true);
-        $idx8 = array_search('8', $ordered, true);
-
-        $includeBridge = false;
-        if ($targetTier === '7.5') {
-            $includeBridge = true;
-        } elseif ($idx7 !== false && $idx8 !== false) {
-            if ($currentIdx <= $idx7 && $targetIdx >= $idx8) {
-                $includeBridge = true;
-            }
-        }
-
         $price = 0;
         $breakdown = [];
         $objectiveMap = $this->tierObjectiveMap();
         for ($i = $currentIdx; $i <= $targetIdx; $i++) {
             $tierKey = $ordered[$i];
-            if ($tierKey === '7.5' && !$includeBridge) {
-                continue;
-            }
             if (!isset(self::TIER_SKIP_COSTS[$tierKey])) {
                 continue;
             }
@@ -762,7 +846,6 @@ final class ShopController
         return [
             'price' => $price,
             'breakdown' => $breakdown,
-            'bridge_added' => $includeBridge,
         ];
     }
 
@@ -771,7 +854,7 @@ final class ShopController
      */
     private function orderedTiers(): array
     {
-        return ['0','1','2','3','4','5','6','7','7.5','8','9','10','11','12'];
+        return ['1','2','3','4','5','6','7','8','9','10','11','12'];
     }
 
     private function normalizeTierInput($value): ?string
@@ -783,12 +866,9 @@ final class ShopController
         if ($raw === '') {
             return null;
         }
-        if ($raw === '7.5') {
-            return '7.5';
-        }
         if (ctype_digit($raw)) {
             $intVal = (int)$raw;
-            if ($intVal >= 0 && $intVal <= self::MAX_TIER_SKIP) {
+            if ($intVal >= 1 && $intVal <= self::MAX_TIER_SKIP) {
                 return (string)$intVal;
             }
         }

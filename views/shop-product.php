@@ -48,6 +48,10 @@ if ($selectedCharacter) {
       if ($currentIndex !== null && $tierIndex !== null && $tierIndex < $currentIndex) {
           continue;
       }
+      $requiredLevel = ((int)$tierValue <= 7) ? 60 : 70;
+      if ((int)($selectedCharacter['level'] ?? 1) < $requiredLevel) {
+          continue;
+      }
       $totalCost = $tierTotals[$tierValue] ?? null;
       if ($totalCost === null) {
           continue;
@@ -62,7 +66,10 @@ if ($selectedCharacter) {
 }
 
 $sku = $product['sku'] ?? '';
+$productSku = (string)$sku;
 $isTierSkip = ($product['price_type'] ?? '') === 'tier_skip';
+$isBoost60 = $productSku === 'BOOST_60';
+$isBoost70 = $productSku === 'BOOST_70';
 $priceDisplay = $isTierSkip
     ? 'Variable'
     : number_format((int)($product['price_marks'] ?? 0)) . ' Marks';
@@ -94,27 +101,42 @@ $showPurchaseButton = !$isTierSkip || ($targetTier !== null && $targetTier !== '
 
   <section class="shop-section">
     <div class="shop-detail-card">
-      <h2 class="section-title shop-section-title">Tier Completion (Individual Progression Skip)</h2>
-      <div class="intro-text">
-        <p class="section-lead">
-          Tier Completion allows a character to bypass selected Tier Locks in the Individual Progression system by spending Marks, reducing the need to replay earlier progression content on alts or late-starting characters. The feature is designed as a convenience option that preserves progression integrity rather than replacing gameplay.
-        </p>
-        <p>
-          Using Tier Completion, a character may automatically complete Tier Locks from Vanilla (Tier 0–7) and The Burning Crusade (Tier 8–12). Each Tier has a fixed Marks cost that reflects the time and effort normally required to complete it. A full skip from Tier 0 through Tier 12 costs 1000 Marks.
-        </p>
-        <p>
-          Tiers that are auto-completed through this feature do not generate Marks for the account. Marks are only awarded for Tiers completed through normal gameplay.
-        </p>
-        <p>
-          The cost of a full Tier 0–12 skip is intentionally set to match the total Marks earned by progressing naturally through all 17 Tiers of the game. Completing the full progression once allows a player to fast-track one character through pre-Wrath content, while spending Marks on a character reduces how much progression can be skipped elsewhere.
-        </p>
-        <p>
-          Tier Completion is strictly limited to earlier content. Wrath of the Lich King progression (Tier 13–17) cannot be skipped and must always be played as intended. All characters are required to level from 70 to 80 and progress through Wrath raid tiers normally. No Wrath levels, gear, reputation, or raid achievements are granted through this feature.
-        </p>
-        <p>
-          Tier Completion exists to reduce repetition, support alt play, and provide a transparent alternative to replaying older Tier Locks—without trivializing endgame progression.
-        </p>
-      </div>
+      <?php if ($isTierSkip): ?>
+        <h2 class="section-title shop-section-title">Tier Completion (Tier 1-12)</h2>
+        <div class="intro-text">
+          <p class="section-lead">
+            Skip selected Tier Locks from Tier 1 through Tier 12 by spending Marks. Tier 0 and Tier 7.5 are handled as separate standalone shop products.
+          </p>
+          <p>
+            Tier targets up to Tier 7 require level 60. Tier targets from Tier 8 through Tier 12 require level 70.
+          </p>
+          <p>
+            Tier 4 currently has no Marks cost while the server-core progression issue remains unresolved.
+          </p>
+        </div>
+      <?php elseif ($isBoost60): ?>
+        <h2 class="section-title shop-section-title">Tier 0 Boost (Level 60 + Gear)</h2>
+        <div class="intro-text">
+          <p class="section-lead">
+            This product completes the Tier 0 boost step for one character: level 60 setup with starter gear.
+          </p>
+          <p>
+            It is only available for characters below level 60.
+          </p>
+        </div>
+      <?php elseif ($isBoost70): ?>
+        <h2 class="section-title shop-section-title">Tier 7.5 Boost (Level 70 + Gear)</h2>
+        <div class="intro-text">
+          <p class="section-lead">
+            This product applies the Tier 7.5 boost step for one character: level 70 setup with starter gear.
+          </p>
+          <p>
+            It requires at least Tier 7 progression and is only available below level 70.
+          </p>
+        </div>
+      <?php else: ?>
+        <h2 class="section-title shop-section-title">Product Details</h2>
+      <?php endif; ?>
 
       <?php if ($selectedCharacter): ?>
         <div class="shop-kv" style="margin-top: 1rem;">
@@ -136,6 +158,7 @@ $showPurchaseButton = !$isTierSkip || ($targetTier !== null && $targetTier !== '
               Select a character and desired tier to preview pricing.
             <?php endif; ?>
           </div>
+          <div><span>Level Requirements:</span> Tier 1-7 requires level 60. Tier 8-12 requires level 70.</div>
         </div>
 
         <?php if ($preview && !empty($preview['breakdown'])): ?>
@@ -153,6 +176,15 @@ $showPurchaseButton = !$isTierSkip || ($targetTier !== null && $targetTier !== '
             <?php endforeach; ?>
           </ul>
         <?php endif; ?>
+      <?php else: ?>
+        <div class="shop-kv" style="margin-top: 1rem;">
+          <div><span>Price:</span> <?= htmlspecialchars($priceDisplay) ?></div>
+          <?php if ($isBoost60): ?>
+            <div><span>Requirement:</span> Character must be below level 60.</div>
+          <?php elseif ($isBoost70): ?>
+            <div><span>Requirement:</span> Character must be Tier 7+ and below level 70.</div>
+          <?php endif; ?>
+        </div>
       <?php endif; ?>
 
       <form method="post" action="/shop/buy" class="shop-form">
