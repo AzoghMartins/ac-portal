@@ -14,6 +14,8 @@ use PDO;
  */
 final class HomeController
 {
+    private const KARDINAL_REALM_ID = 1;
+
     /**
      * Renders the landing page with realm telemetry.
      */
@@ -32,9 +34,15 @@ final class HomeController
         $lastHeartbeat  = null;
         try {
             $pdoAuth = Db::pdo($authDb);
-            $row = $pdoAuth
-                ->query("SELECT starttime, uptime, revision FROM uptime ORDER BY starttime DESC LIMIT 1")
-                ->fetch(PDO::FETCH_ASSOC);
+            $stmt = $pdoAuth->prepare(
+                'SELECT starttime, uptime, revision
+                 FROM uptime
+                 WHERE realmid = :realm_id
+                 ORDER BY starttime DESC
+                 LIMIT 1'
+            );
+            $stmt->execute([':realm_id' => self::KARDINAL_REALM_ID]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row) {
                 $rev           = $row['revision'] ?? null;
                 $uptimeSeconds = isset($row['uptime']) ? (int)$row['uptime'] : null;
@@ -132,7 +140,9 @@ final class HomeController
         }
         try {
             $pdo = Db::pdo($authDb);
-            $row = $pdo->query("SELECT name FROM realmlist WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            $stmt = $pdo->prepare('SELECT name FROM realmlist WHERE id = :realm_id LIMIT 1');
+            $stmt->execute([':realm_id' => self::KARDINAL_REALM_ID]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row && isset($row['name'])) {
                 $realmName = $row['name'];
             }
