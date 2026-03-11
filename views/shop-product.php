@@ -15,6 +15,11 @@
  * @var array $tierTotals
  * @var array $orderedTiers
  * @var string|null $nextProgressionLabel
+ * @var array $boostSpecOptions
+ * @var array $boostProfessionOptions
+ * @var string|null $selectedBoostSpec
+ * @var string|null $selectedBoostSkill1
+ * @var string|null $selectedBoostSkill2
  */
 
 $product = $product ?? [];
@@ -28,7 +33,24 @@ $tierObjectives = $tierObjectives ?? [];
 $tierTotals = $tierTotals ?? [];
 $orderedTiers = $orderedTiers ?? [];
 $nextProgressionLabel = $nextProgressionLabel ?? null;
+$boostSpecOptions = $boostSpecOptions ?? [];
+$boostProfessionOptions = $boostProfessionOptions ?? [];
+$selectedBoostSpec = $selectedBoostSpec ?? null;
+$selectedBoostSkill1 = $selectedBoostSkill1 ?? null;
+$selectedBoostSkill2 = $selectedBoostSkill2 ?? null;
 $tierOptions = [];
+$boostSpecLabels = [];
+$boostProfessionLabels = [];
+$isCharacterScope = ($product['scope'] ?? '') === 'character';
+$selectedCharacterOnline = $selectedCharacter ? !empty($selectedCharacter['online']) : false;
+
+foreach ($boostSpecOptions as $option) {
+  $boostSpecLabels[(string)($option['value'] ?? '')] = (string)($option['label'] ?? '');
+}
+foreach ($boostProfessionOptions as $option) {
+  $boostProfessionLabels[(string)($option['value'] ?? '')] = (string)($option['label'] ?? '');
+}
+
 $currentKey = $selectedCharacter ? (string)$selectedCharacter['progression_state'] : null;
 $currentIndex = ($currentKey !== null && $orderedTiers) ? array_search($currentKey, $orderedTiers, true) : null;
 
@@ -84,6 +106,9 @@ if ($isTierSkip) {
     }
 }
 $showPurchaseButton = !$isTierSkip || ($targetTier !== null && $targetTier !== '');
+if (!$isTierSkip && $isCharacterScope) {
+    $showPurchaseButton = $selectedCharacter !== null;
+}
 ?>
 
 <div class="shop-page">
@@ -118,20 +143,26 @@ $showPurchaseButton = !$isTierSkip || ($targetTier !== null && $targetTier !== '
         <h2 class="section-title shop-section-title">Tier 0 Boost (Level 60 + Gear)</h2>
         <div class="intro-text">
           <p class="section-lead">
-            This product completes the Tier 0 boost step for one character: level 60 setup with starter gear.
+            This product completes the Tier 0 boost step for one character: level 60 setup using the selected talent specification and trade skills.
           </p>
           <p>
             It is only available for characters below level 60.
+          </p>
+          <p>
+            If the character is online when the order is processed, the changes apply immediately. Otherwise they apply on the next character login.
           </p>
         </div>
       <?php elseif ($isBoost70): ?>
         <h2 class="section-title shop-section-title">Tier 7.5 Boost (Level 70 + Gear)</h2>
         <div class="intro-text">
           <p class="section-lead">
-            This product applies the Tier 7.5 boost step for one character: level 70 setup with starter gear.
+            This product completes the Tier 7.5 boost step for one character: level 70 setup using the selected talent specification and trade skills.
           </p>
           <p>
-            It requires at least Tier 7 progression and is only available below level 70.
+            It requires a character between level 60 and 69 at active Tier 8 progression (Defeat Prince Malchezaar).
+          </p>
+          <p>
+            If the character is online when the order is processed, the changes apply immediately. Otherwise they apply on the next character login.
           </p>
         </div>
       <?php else: ?>
@@ -142,9 +173,16 @@ $showPurchaseButton = !$isTierSkip || ($targetTier !== null && $targetTier !== '
         <div class="shop-kv" style="margin-top: 1rem;">
           <div><span>Character:</span> <?= htmlspecialchars($selectedCharacter['name'] ?? '') ?></div>
           <div><span>Level:</span> <?= (int)($selectedCharacter['level'] ?? 0) ?></div>
+          <div><span>Status:</span> <?= $selectedCharacterOnline ? 'Online' : 'Offline' ?></div>
           <div><span>Current Progression:</span> <?= htmlspecialchars($selectedCharacter['progression_label'] ?? '') ?></div>
           <?php if ($nextProgressionLabel): ?>
             <div><span>Progression After Purchase:</span> <?= htmlspecialchars($nextProgressionLabel) ?></div>
+          <?php endif; ?>
+          <?php if (($isBoost60 || $isBoost70) && $selectedBoostSpec): ?>
+            <div><span>Selected Spec:</span> <?= htmlspecialchars($boostSpecLabels[$selectedBoostSpec] ?? $selectedBoostSpec) ?></div>
+          <?php endif; ?>
+          <?php if (($isBoost60 || $isBoost70) && $selectedBoostSkill1 && $selectedBoostSkill2): ?>
+            <div><span>Trade Skills:</span> <?= htmlspecialchars(($boostProfessionLabels[$selectedBoostSkill1] ?? $selectedBoostSkill1) . ' / ' . ($boostProfessionLabels[$selectedBoostSkill2] ?? $selectedBoostSkill2)) ?></div>
           <?php endif; ?>
         </div>
       <?php endif; ?>
@@ -181,8 +219,10 @@ $showPurchaseButton = !$isTierSkip || ($targetTier !== null && $targetTier !== '
           <div><span>Price:</span> <?= htmlspecialchars($priceDisplay) ?></div>
           <?php if ($isBoost60): ?>
             <div><span>Requirement:</span> Character must be below level 60.</div>
+            <div><span>Processing:</span> Online characters apply immediately; offline characters apply on next login.</div>
           <?php elseif ($isBoost70): ?>
-            <div><span>Requirement:</span> Character must be Tier 7+ and below level 70.</div>
+            <div><span>Requirement:</span> Character must be level 60-69 at active Tier 8 progression.</div>
+            <div><span>Processing:</span> Online characters apply immediately; offline characters apply on next login.</div>
           <?php endif; ?>
         </div>
       <?php endif; ?>
@@ -190,7 +230,7 @@ $showPurchaseButton = !$isTierSkip || ($targetTier !== null && $targetTier !== '
       <form method="post" action="/shop/buy" class="shop-form">
         <input type="hidden" name="sku" value="<?= htmlspecialchars($sku) ?>">
 
-        <?php if (($product['scope'] ?? '') === 'character'): ?>
+        <?php if ($isCharacterScope): ?>
           <label>
             Character
             <select name="character_guid" required>
@@ -200,14 +240,74 @@ $showPurchaseButton = !$isTierSkip || ($targetTier !== null && $targetTier !== '
                   $guid = (int)($char['guid'] ?? 0);
                   $name = $char['name'] ?? '';
                   $level = (int)($char['level'] ?? 0);
+                  $isOnline = !empty($char['online']);
                   $selected = $selectedCharacter && (int)$selectedCharacter['guid'] === $guid;
                 ?>
                 <option value="<?= $guid ?>" <?= $selected ? 'selected' : '' ?>>
-                  <?= htmlspecialchars($name) ?> (Level <?= $level ?>)
+                  <?= htmlspecialchars($name) ?> (Level <?= $level ?><?= $isOnline ? ', Online' : ', Offline' ?>)
                 </option>
               <?php endforeach; ?>
             </select>
           </label>
+        <?php endif; ?>
+
+        <?php if (($isBoost60 || $isBoost70) && $selectedCharacter): ?>
+          <?php if (!empty($boostSpecOptions)): ?>
+            <label>
+              Talent Specification
+              <select name="spec" required>
+                <option value="">Select a spec</option>
+                <?php foreach ($boostSpecOptions as $option): ?>
+                  <?php
+                    $value = (string)($option['value'] ?? '');
+                    $label = (string)($option['label'] ?? $value);
+                    $selected = $selectedBoostSpec !== null && $selectedBoostSpec === $value;
+                  ?>
+                  <option value="<?= htmlspecialchars($value) ?>" <?= $selected ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($label) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+          <?php else: ?>
+            <p class="muted">No supported talent specifications were found for this class.</p>
+          <?php endif; ?>
+
+          <label>
+            Trade Skill 1
+            <select name="skill1" required>
+              <option value="">Select a trade skill</option>
+              <?php foreach ($boostProfessionOptions as $option): ?>
+                <?php
+                  $value = (string)($option['value'] ?? '');
+                  $label = (string)($option['label'] ?? $value);
+                  $selected = $selectedBoostSkill1 !== null && $selectedBoostSkill1 === $value;
+                ?>
+                <option value="<?= htmlspecialchars($value) ?>" <?= $selected ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($label) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+
+          <label>
+            Trade Skill 2
+            <select name="skill2" required>
+              <option value="">Select a trade skill</option>
+              <?php foreach ($boostProfessionOptions as $option): ?>
+                <?php
+                  $value = (string)($option['value'] ?? '');
+                  $label = (string)($option['label'] ?? $value);
+                  $selected = $selectedBoostSkill2 !== null && $selectedBoostSkill2 === $value;
+                ?>
+                <option value="<?= htmlspecialchars($value) ?>" <?= $selected ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($label) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+        <?php elseif ($isBoost60 || $isBoost70): ?>
+          <p class="muted">Select a character to load talent and trade skill options.</p>
         <?php endif; ?>
 
         <?php if ($isTierSkip && $selectedCharacter && !empty($tierOptions)): ?>
@@ -253,7 +353,7 @@ $showPurchaseButton = !$isTierSkip || ($targetTier !== null && $targetTier !== '
   </div>
 </div>
 
-<?php if ($isTierSkip): ?>
+<?php if ($isCharacterScope || $isTierSkip): ?>
 <script>
 (function () {
   var charSelect = document.querySelector('select[name=\"character_guid\"]');

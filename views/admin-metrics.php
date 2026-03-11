@@ -33,10 +33,12 @@ function format_bytes(int $bytes): string {
     $isSoap = str_starts_with($path, '/admin/soap');
     $isMetrics = str_starts_with($path, '/admin/metrics');
     $isSettings = str_starts_with($path, '/admin/settings');
+    $isMarks = str_starts_with($path, '/admin/marks');
   ?>
   <nav class="admin-subnav">
     <a href="/admin/metrics" class="<?= $isMetrics ? 'is-active' : '' ?>">Metrics</a>
     <a href="/admin/soap" class="<?= $isSoap ? 'is-active' : '' ?>">SOAP Console</a>
+    <a href="/admin/marks" class="<?= $isMarks ? 'is-active' : '' ?>">Marks</a>
     <a href="/admin/settings" class="<?= $isSettings ? 'is-active' : '' ?>">Settings</a>
   </nav>
 

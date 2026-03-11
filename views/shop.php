@@ -16,7 +16,7 @@ $selectedGuid = isset($selectedGuid) ? (int)$selectedGuid : null;
   <header class="shop-header">
     <h1 class="shop-title">Shop</h1>
     <p class="shop-subtitle">
-      Spend Marks on progression boosts and character upgrades. Fulfillment is queued for staff review.
+      Spend Marks on progression boosts and character upgrades. Orders are queued for automated fulfillment.
     </p>
   </header>
 
@@ -59,9 +59,9 @@ $selectedGuid = isset($selectedGuid) ? (int)$selectedGuid : null;
                 if (($product['sku'] ?? '') === 'TIER_SKIP') {
                     $cardDesc = 'Skip selected Tier Locks from Tier 1 to Tier 12. Tier 0 and Tier 7.5 boosts are separate products.';
                 } elseif (($product['sku'] ?? '') === 'BOOST_60') {
-                    $cardDesc = 'Standalone Tier 0 boost: set a character to level 60 and provide starter gear.';
+                    $cardDesc = 'Standalone Tier 0 boost: choose a spec and two trade skills, then set one character to level 60 with module-driven gear.';
                 } elseif (($product['sku'] ?? '') === 'BOOST_70') {
-                    $cardDesc = 'Standalone Tier 7.5 boost: set a Tier 7 character to level 70 and provide starter gear.';
+                    $cardDesc = 'Standalone Tier 7.5 boost: choose a spec and two trade skills, then set one active Tier 8 character to level 70 with module-driven gear.';
                 }
               ?>
               <p class="shop-product-desc"><?= htmlspecialchars($cardDesc) ?></p>

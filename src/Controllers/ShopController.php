@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Auth;
+use App\BoostOptions;
 use App\Db;
 use App\View;
 use PDO;
@@ -83,12 +84,25 @@ final class ShopController
         $selectedCharacter = null;
         $error = null;
         $preview = null;
+        $boostState = [];
 
         if ($selectedGuid) {
             $selectedCharacter = $this->loadCharacter($selectedGuid, $accountId);
             if (!$selectedCharacter) {
                 $error = 'Selected character was not found on your account.';
             }
+        }
+
+        if ($product['sku'] === self::SKU_BOOST_60 || $product['sku'] === self::SKU_BOOST_70) {
+            $boostState = $this->buildBoostFormState($selectedCharacter, $_GET, true);
+        }
+
+        if ($product['sku'] === self::SKU_BOOST_60 && $selectedCharacter && $error === null) {
+            $error = $this->boost60RequirementError($selectedCharacter);
+        }
+
+        if ($product['sku'] === self::SKU_BOOST_70 && $selectedCharacter && $error === null) {
+            $error = $this->boost70RequirementError($selectedCharacter);
         }
 
         if ($product['sku'] === self::SKU_TIER_SKIP && $selectedCharacter && $targetTier !== null) {
@@ -102,7 +116,7 @@ final class ShopController
             }
         }
 
-        $this->renderProductView($product, $characters, $selectedCharacter, $targetTier, $preview, $error, null, $accountId);
+        $this->renderProductView($product, $characters, $selectedCharacter, $targetTier, $preview, $error, null, $accountId, null, $boostState);
     }
 
     public function buy(): void
@@ -140,6 +154,7 @@ final class ShopController
         $selectedCharacter = null;
         $error = null;
         $preview = null;
+        $boostState = [];
 
         if ($product['scope'] === 'character') {
             if (!$selectedGuid) {
@@ -150,6 +165,10 @@ final class ShopController
                     $error = 'Selected character was not found on your account.';
                 }
             }
+        }
+
+        if ($product['sku'] === self::SKU_BOOST_60 || $product['sku'] === self::SKU_BOOST_70) {
+            $boostState = $this->buildBoostFormState($selectedCharacter, $_POST, false);
         }
 
         $price = null;
@@ -164,6 +183,7 @@ final class ShopController
                 'guid' => (int)$selectedCharacter['guid'],
                 'name' => (string)($selectedCharacter['name'] ?? ''),
                 'level' => (int)($selectedCharacter['level'] ?? 0),
+                'online' => !empty($selectedCharacter['online']),
             ];
         }
 
@@ -177,14 +197,38 @@ final class ShopController
                     if ($eligibilityError !== null) {
                         $error = $eligibilityError;
                     } else {
-                        $details['payload'] = $this->buildBoost60Payload($selectedCharacter);
+                        $selectedSpec = isset($boostState['selectedSpec']) ? (string)$boostState['selectedSpec'] : null;
+                        $selectedSkill1 = isset($boostState['selectedSkill1']) ? (string)$boostState['selectedSkill1'] : null;
+                        $selectedSkill2 = isset($boostState['selectedSkill2']) ? (string)$boostState['selectedSkill2'] : null;
+                        $selectionError = $this->boostSelectionError($selectedCharacter, $selectedSpec, $selectedSkill1, $selectedSkill2);
+                        if ($selectionError !== null) {
+                            $error = $selectionError;
+                        } else {
+                            $details['boost_setup'] = [
+                                'spec' => $selectedSpec,
+                                'professions' => [$selectedSkill1, $selectedSkill2],
+                            ];
+                            $details['payload'] = $this->buildBoost60Payload($selectedCharacter, $selectedSpec, [$selectedSkill1, $selectedSkill2]);
+                        }
                     }
                 } elseif ($product['sku'] === self::SKU_BOOST_70) {
                     $eligibilityError = $this->boost70RequirementError($selectedCharacter);
                     if ($eligibilityError !== null) {
                         $error = $eligibilityError;
                     } else {
-                        $details['payload'] = $this->buildBoost70Payload($selectedCharacter);
+                        $selectedSpec = isset($boostState['selectedSpec']) ? (string)$boostState['selectedSpec'] : null;
+                        $selectedSkill1 = isset($boostState['selectedSkill1']) ? (string)$boostState['selectedSkill1'] : null;
+                        $selectedSkill2 = isset($boostState['selectedSkill2']) ? (string)$boostState['selectedSkill2'] : null;
+                        $selectionError = $this->boostSelectionError($selectedCharacter, $selectedSpec, $selectedSkill1, $selectedSkill2);
+                        if ($selectionError !== null) {
+                            $error = $selectionError;
+                        } else {
+                            $details['boost_setup'] = [
+                                'spec' => $selectedSpec,
+                                'professions' => [$selectedSkill1, $selectedSkill2],
+                            ];
+                            $details['payload'] = $this->buildBoost70Payload($selectedCharacter, $selectedSpec, [$selectedSkill1, $selectedSkill2]);
+                        }
                     }
                 }
             } elseif ($product['price_type'] === 'tier_skip') {
@@ -213,12 +257,12 @@ final class ShopController
         }
 
         if ($error !== null) {
-            $this->renderProductView($product, $characters, $selectedCharacter, $targetTier, $preview, $error, null, $accountId);
+            $this->renderProductView($product, $characters, $selectedCharacter, $targetTier, $preview, $error, null, $accountId, null, $boostState);
             return;
         }
 
         if ($price === null || $price <= 0) {
-            $this->renderProductView($product, $characters, $selectedCharacter, $targetTier, $preview, 'Invalid price for purchase.', null, $accountId);
+            $this->renderProductView($product, $characters, $selectedCharacter, $targetTier, $preview, 'Invalid price for purchase.', null, $accountId, null, $boostState);
             return;
         }
 
@@ -231,7 +275,7 @@ final class ShopController
             $balance = $this->marksBalance($accountId, $pdo, true);
             if ($balance < $price) {
                 $pdo->rollBack();
-                $this->renderProductView($product, $characters, $selectedCharacter, $targetTier, $preview, 'Not enough Marks to complete this purchase.', null, $accountId, $balance);
+                $this->renderProductView($product, $characters, $selectedCharacter, $targetTier, $preview, 'Not enough Marks to complete this purchase.', null, $accountId, $balance, $boostState);
                 return;
             }
 
@@ -286,7 +330,7 @@ final class ShopController
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            $this->renderProductView($product, $characters, $selectedCharacter, $targetTier, $preview, 'Purchase failed: ' . $e->getMessage(), null, $accountId);
+            $this->renderProductView($product, $characters, $selectedCharacter, $targetTier, $preview, 'Purchase failed: ' . $e->getMessage(), null, $accountId, null, $boostState);
             return;
         }
 
@@ -363,12 +407,26 @@ final class ShopController
         ?string $error,
         ?string $success,
         int $accountId,
-        ?int $balanceOverride = null
+        ?int $balanceOverride = null,
+        array $boostState = []
     ): void {
         $nextProgressionLabel = null;
-        if ($selectedCharacter && $targetTier !== null && $preview) {
+        $sku = (string)($product['sku'] ?? '');
+        if ($selectedCharacter && $sku === self::SKU_BOOST_60) {
+            $nextProgressionLabel = $this->progressionLabel(1);
+        } elseif ($selectedCharacter && $sku === self::SKU_BOOST_70) {
+            $nextProgressionLabel = $this->progressionLabel(8);
+        } elseif ($selectedCharacter && $targetTier !== null && $preview) {
             $nextProgressionLabel = $this->nextProgressionLabel($targetTier);
         }
+
+        $boostState += [
+            'specOptions' => [],
+            'professionOptions' => BoostOptions::professionOptions(),
+            'selectedSpec' => null,
+            'selectedSkill1' => null,
+            'selectedSkill2' => null,
+        ];
 
         View::render('shop-product', [
             'title' => $product['name'] ?? 'Shop Product',
@@ -386,6 +444,11 @@ final class ShopController
             'tierTotals' => $selectedCharacter ? $this->tierSkipTotals($selectedCharacter) : [],
             'orderedTiers' => $this->orderedTiers(),
             'nextProgressionLabel' => $nextProgressionLabel,
+            'boostSpecOptions' => $boostState['specOptions'],
+            'boostProfessionOptions' => $boostState['professionOptions'],
+            'selectedBoostSpec' => $boostState['selectedSpec'],
+            'selectedBoostSkill1' => $boostState['selectedSkill1'],
+            'selectedBoostSkill2' => $boostState['selectedSkill2'],
         ]);
     }
 
@@ -422,7 +485,7 @@ final class ShopController
         $charsDb = Db::env('DB_CHARACTERS', 'acore_characters');
         $pdoChars = Db::pdo($charsDb);
         $stmt = $pdoChars->prepare('
-            SELECT guid, name, level, class, race, gender
+            SELECT guid, name, level, class, race, gender, online
             FROM characters
             WHERE account = :acct
             ORDER BY level DESC, name ASC
@@ -454,8 +517,16 @@ final class ShopController
 
         if ($sku === self::SKU_BOOST_70) {
             return array_values(array_filter($characters, static function (array $char): bool {
-                return (int)($char['level'] ?? 0) < 70
-                    && (int)($char['progression_state'] ?? 0) >= 7;
+                $level = (int)($char['level'] ?? 0);
+                return $level >= 60
+                    && $level < 70
+                    && (int)($char['progression_state'] ?? 0) === 8;
+            }));
+        }
+
+        if ($sku === self::SKU_TIER_SKIP) {
+            return array_values(array_filter($characters, static function (array $char): bool {
+                return (int)($char['level'] ?? 0) >= 60;
             }));
         }
 
@@ -467,7 +538,7 @@ final class ShopController
         $charsDb = Db::env('DB_CHARACTERS', 'acore_characters');
         $pdoChars = Db::pdo($charsDb);
         $stmt = $pdoChars->prepare('
-            SELECT guid, account, name, level, class, race, gender
+            SELECT guid, account, name, level, class, race, gender, online
             FROM characters
             WHERE guid = :guid
             LIMIT 1
@@ -626,34 +697,32 @@ final class ShopController
         ];
     }
 
-    private function buildBoost60Payload(array $character): array
+    private function buildBoost60Payload(array $character, string $spec, array $professions): array
     {
-        $currentTier = (int)($character['progression_state'] ?? 0);
         return [
-            'action' => 'tier_purchase',
-            'current_tier' => $currentTier,
-            'skip_to_tier' => '0',
-            'result_tier' => 1,
-            'boost' => [
-                'target_level' => 60,
-                'gear_profile' => 'boost60_class_generic',
-            ],
+            'action' => 'specplayer_boost',
+            'character_guid' => (int)($character['guid'] ?? 0),
+            'character_name' => (string)($character['name'] ?? ''),
+            'class_id' => (int)($character['class'] ?? 0),
+            'target_level' => 60,
+            'target_progression' => 1,
+            'spec' => $spec,
+            'professions' => array_values($professions),
             'gold_copper' => 5000000,
         ];
     }
 
-    private function buildBoost70Payload(array $character): array
+    private function buildBoost70Payload(array $character, string $spec, array $professions): array
     {
-        $currentTier = (int)($character['progression_state'] ?? 0);
         return [
-            'action' => 'tier_purchase',
-            'current_tier' => $currentTier,
-            'skip_to_tier' => '7.5',
-            'result_tier' => 8,
-            'boost' => [
-                'target_level' => 70,
-                'gear_profile' => 'boost70_class_generic',
-            ],
+            'action' => 'specplayer_boost',
+            'character_guid' => (int)($character['guid'] ?? 0),
+            'character_name' => (string)($character['name'] ?? ''),
+            'class_id' => (int)($character['class'] ?? 0),
+            'target_level' => 70,
+            'target_progression' => 8,
+            'spec' => $spec,
+            'professions' => array_values($professions),
             'gold_copper' => 5000000,
         ];
     }
@@ -688,6 +757,33 @@ final class ShopController
         return null;
     }
 
+    private function boostSelectionError(?array $character, ?string $selectedSpec, ?string $selectedSkill1, ?string $selectedSkill2): ?string
+    {
+        if (!$character) {
+            return 'Select a character for this purchase.';
+        }
+
+        $classId = (int)($character['class'] ?? 0);
+        if ($selectedSpec === null || $selectedSpec === '') {
+            return 'Select a talent specification for this character.';
+        }
+        if (!BoostOptions::isValidSpecForClass($classId, $selectedSpec)) {
+            return 'Selected talent specification is not valid for this class.';
+        }
+
+        if ($selectedSkill1 === null || $selectedSkill2 === null || $selectedSkill1 === '' || $selectedSkill2 === '') {
+            return 'Select two trade skills for this character.';
+        }
+        if (!BoostOptions::isValidProfession($selectedSkill1) || !BoostOptions::isValidProfession($selectedSkill2)) {
+            return 'Selected trade skill is not valid.';
+        }
+        if ($selectedSkill1 === $selectedSkill2) {
+            return 'Choose two different trade skills.';
+        }
+
+        return null;
+    }
+
     private function boost70RequirementError(?array $character): ?string
     {
         if (!$character) {
@@ -695,13 +791,16 @@ final class ShopController
         }
 
         $level = (int)($character['level'] ?? 0);
+        if ($level < 60) {
+            return 'This product requires a character at level 60 or higher.';
+        }
         if ($level >= 70) {
             return 'This product is only available for characters below level 70.';
         }
 
         $progressionState = (int)($character['progression_state'] ?? 0);
-        if ($progressionState < 7) {
-            return 'This product requires a character at Tier 7 progression or higher.';
+        if ($progressionState !== 8) {
+            return 'This product requires a character at active Tier 8 progression (Defeat Prince Malchezaar).';
         }
 
         return null;
@@ -855,6 +954,85 @@ final class ShopController
     private function orderedTiers(): array
     {
         return ['1','2','3','4','5','6','7','8','9','10','11','12'];
+    }
+
+    private function buildBoostFormState(?array $selectedCharacter, array $input, bool $applyDefaults): array
+    {
+        $state = [
+            'specOptions' => [],
+            'professionOptions' => BoostOptions::professionOptions(),
+            'selectedSpec' => $this->normalizeBoostInput($input['spec'] ?? null),
+            'selectedSkill1' => $this->normalizeBoostInput($input['skill1'] ?? null),
+            'selectedSkill2' => $this->normalizeBoostInput($input['skill2'] ?? null),
+        ];
+
+        if (!$selectedCharacter) {
+            return $state;
+        }
+
+        $state['specOptions'] = BoostOptions::specOptionsForClass((int)($selectedCharacter['class'] ?? 0));
+
+        if ($applyDefaults) {
+            $defaults = $this->characterProfessionDefaults((int)($selectedCharacter['guid'] ?? 0));
+            if ($state['selectedSkill1'] === null && isset($defaults[0])) {
+                $state['selectedSkill1'] = $defaults[0];
+            }
+            if ($state['selectedSkill2'] === null && isset($defaults[1])) {
+                $state['selectedSkill2'] = $defaults[1];
+            }
+        }
+
+        return $state;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function characterProfessionDefaults(int $guid): array
+    {
+        if ($guid <= 0) {
+            return [];
+        }
+
+        $skillIds = BoostOptions::professionSkillIds();
+        if (!$skillIds) {
+            return [];
+        }
+
+        $charsDb = Db::env('DB_CHARACTERS', 'acore_characters');
+        $pdoChars = Db::pdo($charsDb);
+        $placeholders = implode(',', array_fill(0, count($skillIds), '?'));
+        $stmt = $pdoChars->prepare("
+            SELECT skill
+            FROM character_skills
+            WHERE guid = ?
+              AND value > 0
+              AND skill IN ($placeholders)
+            ORDER BY skill ASC
+        ");
+        $stmt->execute(array_merge([$guid], $skillIds));
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $tokens = [];
+        foreach ($rows as $row) {
+            $token = BoostOptions::professionTokenForSkill((int)($row['skill'] ?? 0));
+            if ($token === null) {
+                continue;
+            }
+            $tokens[] = $token;
+        }
+
+        return array_values(array_unique(array_slice($tokens, 0, 2)));
+    }
+
+    private function normalizeBoostInput($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $raw = trim(strtolower((string)$value));
+        return $raw === '' ? null : $raw;
     }
 
     private function normalizeTierInput($value): ?string

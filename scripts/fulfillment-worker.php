@@ -26,6 +26,16 @@ function log_line(string $msg): void
     echo "[$ts] $msg\n";
 }
 
+function summarize_note(string $text, int $limit = 220): string
+{
+    $text = preg_replace('/\s+/', ' ', trim($text)) ?? '';
+    if (strlen($text) <= $limit) {
+        return $text;
+    }
+
+    return substr($text, 0, $limit - 3) . '...';
+}
+
 function update_character_skills(PDO $pdoChars, int $guid, int $level): void
 {
     $max = $level * 5;
@@ -107,6 +117,27 @@ function upsert_progression(PDO $pdoChars, int $guid, int $tier): void
         $ins = $pdoChars->prepare("INSERT INTO character_settings (guid, source, data) VALUES (:guid, 'mod-individual-progression', :tier)");
         $ins->execute([':guid' => $guid, ':tier' => (string)$tier]);
     }
+}
+
+function current_progression(PDO $pdoChars, int $guid, int $level): int
+{
+    $stmt = $pdoChars->prepare("SELECT data FROM character_settings WHERE guid = :guid AND source = 'mod-individual-progression' LIMIT 1");
+    $stmt->execute([':guid' => $guid]);
+    $value = $stmt->fetchColumn();
+
+    $progression = 0;
+    if ($value !== false && $value !== null) {
+        $raw = trim((string)$value);
+        if ($raw !== '' && preg_match('/-?\d+/', $raw, $matches)) {
+            $progression = (int)$matches[0];
+        }
+    }
+
+    if ($progression === 0 && $level >= 60) {
+        $progression = 1;
+    }
+
+    return $progression;
 }
 
 function class_profile(int $classId, PDO $pdoWorld, int $targetLevel): array
@@ -432,13 +463,15 @@ $portalDb = Db::env('DB_PORTAL', 'ac_portal');
 $charsDb = Db::env('DB_CHARACTERS', 'acore_characters');
 $worldDb = Db::env('DB_WORLD', 'acore_world');
 
-$pdoPortal = Db::pdoWrite($portalDb);
-$pdoChars = Db::pdoWrite($charsDb);
-$pdoWorld = Db::pdo($worldDb);
-
 $processed = 0;
 
 while (true) {
+    // This worker is long-lived under systemd. Reconnect each pass so idle MySQL
+    // timeouts do not leave us with stale PDO handles between queued purchases.
+    $pdoPortal = Db::reconnect($portalDb, true);
+    $pdoChars = Db::reconnect($charsDb, true);
+    $pdoWorld = Db::reconnect($worldDb);
+
     $pdoPortal->beginTransaction();
     $row = $pdoPortal->query("SELECT * FROM shop_fulfillment WHERE status = 'queued' ORDER BY created_at ASC LIMIT 1 FOR UPDATE")->fetch(PDO::FETCH_ASSOC);
     if (!$row) {
@@ -488,38 +521,108 @@ while (true) {
         }
 
         $characterName = (string)$char['name'];
-        $classId = (int)$char['class'];
-        $targetTier = (int)($payload['result_tier'] ?? 0);
-
-        $boost = $payload['boost'] ?? [];
-        $targetLevel = isset($boost['target_level']) ? (int)$boost['target_level'] : null;
-        $gearProfile = $boost['gear_profile'] ?? null;
+        $action = (string)($payload['action'] ?? '');
         $goldCopper = isset($payload['gold_copper']) ? (int)$payload['gold_copper'] : 0;
 
-        if ($targetLevel !== null && $targetLevel > 0) {
-            WorldServerSoap::execute(sprintf('character level %s %d', $characterName, $targetLevel));
-            WorldServerSoap::execute(sprintf('reset talents %s', $characterName));
-            update_character_skills($pdoChars, $charGuid, $targetLevel);
-        }
+        if ($action === 'specplayer_boost') {
+            $targetLevel = isset($payload['target_level']) ? (int)$payload['target_level'] : 0;
+            $targetTier = isset($payload['target_progression']) ? (int)$payload['target_progression'] : 0;
+            $requestedSpec = trim((string)($payload['spec'] ?? ''));
+            $requestedProfessions = $payload['professions'] ?? [];
 
-        if ($gearProfile && $classId !== 6 && $targetLevel) {
-            $items = pick_gear($pdoWorld, $classId, (int)$targetLevel);
-            if (!empty($items)) {
-                send_items($characterName, $items);
-            } else {
-                $notes[] = 'No gear candidates found for profile ' . $gearProfile . '.';
+            if ($targetLevel <= 0) {
+                throw new RuntimeException('specplayer payload missing target level.');
             }
-        }
+            if ($targetTier <= 0) {
+                throw new RuntimeException('specplayer payload missing target progression.');
+            }
+            if ($requestedSpec === '') {
+                throw new RuntimeException('specplayer payload missing spec.');
+            }
+            if (!is_array($requestedProfessions)) {
+                throw new RuntimeException('specplayer professions payload is invalid.');
+            }
 
-        if ($goldCopper > 0) {
-            send_money($characterName, $goldCopper);
-        }
+            $professions = [];
+            foreach ($requestedProfessions as $profession) {
+                $token = trim((string)$profession);
+                if ($token === '') {
+                    continue;
+                }
+                $professions[] = $token;
+            }
+            if ($professions && count($professions) !== 2) {
+                throw new RuntimeException('specplayer payload must include zero or two professions.');
+            }
+            if (count(array_unique($professions)) !== count($professions)) {
+                throw new RuntimeException('specplayer professions must be distinct.');
+            }
 
-        upsert_progression($pdoChars, $charGuid, $targetTier);
-        try {
-            record_skipped_tiers($pdoPortal, (int)$purchase['account_id'], $charGuid, $purchaseId, $payload);
-        } catch (Throwable $e) {
-            $notes[] = 'Skipped tiers not recorded: ' . $e->getMessage();
+            $command = sprintf('specplayer %s %s %d', $characterName, $requestedSpec, $targetLevel);
+            if ($professions) {
+                $command .= ' ' . implode(' ', $professions);
+            }
+
+            $soapResult = WorldServerSoap::execute($command);
+            if ($soapResult !== '') {
+                $notes[] = summarize_note($soapResult);
+            }
+
+            if ($goldCopper > 0) {
+                send_money($characterName, $goldCopper);
+            }
+
+            $currentTier = current_progression($pdoChars, $charGuid, (int)$char['level']);
+            upsert_progression($pdoChars, $charGuid, max($currentTier, $targetTier));
+        } elseif ($action === 'tier_purchase') {
+            $classId = (int)$char['class'];
+            $targetTier = (int)($payload['result_tier'] ?? 0);
+            $currentTier = current_progression($pdoChars, $charGuid, (int)$char['level']);
+
+            $boost = $payload['boost'] ?? [];
+            $targetLevel = isset($boost['target_level']) ? (int)$boost['target_level'] : null;
+            $gearProfile = $boost['gear_profile'] ?? null;
+            $appliedLegacyBoost = false;
+
+            if ($targetLevel !== null && $targetLevel > 0 && (int)$char['level'] < $targetLevel) {
+                WorldServerSoap::execute(sprintf('character level %s %d', $characterName, $targetLevel));
+                WorldServerSoap::execute(sprintf('reset talents %s', $characterName));
+                update_character_skills($pdoChars, $charGuid, $targetLevel);
+                $appliedLegacyBoost = true;
+            } elseif ($targetLevel !== null && $targetLevel > 0) {
+                $notes[] = 'Legacy boost level step skipped because the character is already at or above the requested level.';
+            }
+
+            if ($gearProfile && $classId !== 6 && $targetLevel && $appliedLegacyBoost) {
+                $items = pick_gear($pdoWorld, $classId, (int)$targetLevel);
+                if (!empty($items)) {
+                    send_items($characterName, $items);
+                } else {
+                    $notes[] = 'No gear candidates found for profile ' . $gearProfile . '.';
+                }
+            } elseif ($gearProfile && $classId !== 6 && $targetLevel) {
+                $notes[] = 'Legacy boost gear step skipped because the character no longer needs the requested level boost.';
+            }
+
+            if ($goldCopper > 0) {
+                send_money($characterName, $goldCopper);
+            }
+
+            $effectiveTargetTier = max($currentTier, $targetTier);
+            upsert_progression($pdoChars, $charGuid, $effectiveTargetTier);
+            if ($effectiveTargetTier > $currentTier) {
+                $recordPayload = $payload;
+                $recordPayload['current_tier'] = (string)$currentTier;
+                try {
+                    record_skipped_tiers($pdoPortal, (int)$purchase['account_id'], $charGuid, $purchaseId, $recordPayload);
+                } catch (Throwable $e) {
+                    $notes[] = 'Skipped tiers not recorded: ' . $e->getMessage();
+                }
+            } else {
+                $notes[] = 'No tier progression change applied because the character is already at or above the requested tier.';
+            }
+        } else {
+            throw new RuntimeException('Unknown fulfillment action.');
         }
 
         $noteText = $notes ? implode(' ', $notes) : null;

@@ -84,6 +84,10 @@ switch ($path) {
         (new \App\Controllers\AdminSettingsController())();
         break;
 
+    case '/admin/marks':
+        (new \App\Controllers\AdminMarksController())();
+        break;
+
     case '/auction':
         (new \App\Controllers\AuctionController())();
         break;

@@ -50,6 +50,13 @@ final class Db {
         return self::$pool[$key] = $pdo;
     }
 
+    public static function reconnect(string $db, bool $write = false): PDO {
+        $key = $write ? ($db . ':w') : $db;
+        if (isset(self::$pool[$key])) {
+            unset(self::$pool[$key]);
+        }
 
+        return $write ? self::pdoWrite($db) : self::pdo($db);
+    }
 
 }
